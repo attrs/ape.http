@@ -1,0 +1,801 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<application xmlns="http://research.sun.com/wadl/2006/10">
+    <doc xmlns:jersey="http://jersey.dev.java.net/" jersey:generatedBy="Jersey: 1.1.3-ea-SNAPSHOT 09/28/2009 05:21 AM"/>
+    <resources base="http://appbus.kr/rest/">
+        <resource path="/stage/temporary">
+            <method name="POST" id="createApplication">
+                <request>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <method name="GET" id="getCurrentEditing">
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <resource path="/from/{contextId}/{sourceApplicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="sourceApplicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="contextId"/>
+                <method name="GET" id="from">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="GET" id="getApplication">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="PUT" id="updateApplication">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="DELETE" id="cancelApplication"/>
+            </resource>
+            <resource path="/{applicationId}/upload/{type}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="type"/>
+                <method name="OPTIONS" id="allowOrigin"/>
+                <method name="POST" id="upload">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}/qr">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="GET" id="getQRImage">
+                    <response>
+                        <representation mediaType="*/*"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}/persist">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="PUT" id="persistApplication">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/user">
+            <resource path="/users">
+                <method name="POST" id="createUser">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="GET" id="getUserList">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/users/{userId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="userId"/>
+                <method name="DELETE" id="removeUser"/>
+                <method name="GET" id="getUserInformation">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="PUT" id="setUser">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/users/permission">
+                <method name="POST" id="addPermission">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/users/permission/{idx}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="idx"/>
+                <method name="DELETE" id="removePermission"/>
+            </resource>
+            <resource path="/validation">
+                <method name="POST" id="validateUser">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/apps">
+            <method name="POST" id="createApplication">
+                <request>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <method name="GET" id="getApplicationList">
+                <request>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="query" name="userId"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <resource path="/{applicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="applicationId"/>
+                <method name="GET" id="getApplication">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="DELETE" id="removeApplication"/>
+                <method name="PUT" id="updateApplication">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}/recreate">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="applicationId"/>
+                <method name="PUT" id="recreate">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="templateId"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/admin">
+                <method name="GET" id="getAdminApplicationList">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/stage/tpls">
+            <method name="GET" id="find">
+                <request>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="category"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <method name="POST" id="createTemplate">
+                <request>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <resource path="/from/{contextId}/{sourceApplicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="sourceApplicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="contextId"/>
+                <method name="POST" id="from">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="applicationId"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{templateId}/upload/{type}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="templateId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="type"/>
+                <method name="OPTIONS" id="allowOrigin"/>
+                <method name="POST" id="upload">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{templateId}/qr">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="templateId"/>
+                <method name="GET" id="getQRImage">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="refresh"/>
+                    </request>
+                    <response>
+                        <representation mediaType="image/png"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{templateId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="templateId"/>
+                <method name="DELETE" id="removeTemplate"/>
+                <method name="GET" id="getTemplate">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="PUT" id="updateTemplate">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/assets">
+            <method name="GET" id="getAssetList">
+                <request>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="type"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="atype"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="ctype"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <method name="POST" id="createAsset">
+                <request>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <resource path="/{assetId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="assetId"/>
+                <method name="GET" id="getAsset">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="DELETE" id="removeAsset"/>
+                <method name="PUT" id="updateAsset">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/admin">
+                <method name="GET" id="getAdminAssetList">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="type"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="atype"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="ctype"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/stage/apps">
+            <method name="POST" id="createApplication">
+                <request>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <method name="GET" id="getUserApplications">
+                <request>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="query" name="userId"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <resource path="/from/{contextId}/{sourceApplicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="sourceApplicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="contextId"/>
+                <method name="POST" id="from">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="applicationId"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="GET" id="getApplication">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="DELETE" id="removeApplication"/>
+                <method name="PUT" id="updateApplication">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}/upload/{type}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="type"/>
+                <method name="OPTIONS" id="allowOrigin"/>
+                <method name="POST" id="upload">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}/qr">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="GET" id="getQRImage">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="refresh"/>
+                    </request>
+                    <response>
+                        <representation mediaType="image/png"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}/invoice">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="GET" id="getInvoice">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="query" name="amount"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{applicationId}/recreate">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="PUT" id="recreate">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="templateId"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="GET" id="isExpired">
+                    <response>
+                        <representation mediaType="*/*"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/auth">
+            <resource path="/refresh">
+                <method name="GET" id="refresh">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/has">
+                <method name="GET" id="hasPermission">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="resourceId"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="action"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/session">
+                <method name="GET" id="getUserSession">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/login">
+                <method name="GET" id="login">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="userId"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="password"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/logout">
+                <method name="GET" id="logout">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/files">
+            <resource path="/upload/{type}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="type"/>
+                <method name="OPTIONS" id="allowOrigin"/>
+                <method name="POST" id="upload">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/payment">
+            <method name="GET" id="getMyList">
+                <request>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <resource path="/{paymentId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="paymentId"/>
+                <method name="GET" id="getPayment">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{paymentId}/complete">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="paymentId"/>
+                <method name="POST" id="completePayment">
+                    <request>
+                        <representation mediaType="*/*"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{paymentId}/wait">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="paymentId"/>
+                <method name="POST" id="waitPayment">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/{paymentId}/cancel">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="paymentId"/>
+                <method name="POST" id="cancelPayment">
+                    <response>
+                        <representation mediaType="*/*"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/all">
+                <method name="GET" id="getListAll">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/inipay/{invoiceId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="invoiceId"/>
+                <method name="GET" id="createINIPaySession">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="POST" id="processINIPaySession">
+                    <request>
+                        <representation mediaType="application/x-www-form-urlencoded"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/inipay/{paymentId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="paymentId"/>
+                <method name="DELETE" id="deleteINIPaySession">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/udata">
+            <resource path="/{namespace}/{dataId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="dataId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="namespace"/>
+                <method name="GET" id="get">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="DELETE" id="delete"/>
+                <method name="POST" id="post">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/sms">
+            <method name="GET" id="list">
+                <request>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="category"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                    <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                </request>
+                <response>
+                    <representation mediaType="application/json"/>
+                    <representation mediaType="application/xml"/>
+                </response>
+            </method>
+            <resource path="/{idx}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="idx"/>
+                <method name="GET" id="get">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/send">
+                <method name="POST" id="send">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+            <resource path="/retry/{idx}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="idx"/>
+                <method name="POST" id="retry">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/qrcode">
+            <resource path="/{applicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <method name="GET" id="getQRImage">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="refresh"/>
+                    </request>
+                    <response>
+                        <representation mediaType="image/png"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+        <resource path="/bbs">
+            <resource path="/{applicationId}/{bbsId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="bbsId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="type"/>
+                <method name="POST" id="addArticle">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="GET" id="getList">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="OPTIONS" id="allowOrigin2"/>
+            </resource>
+            <resource path="/{applicationId}/{bbsId}/{idx}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:long" style="template" name="idx"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="bbsId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="type"/>
+                <method name="DELETE" id="deleteArticle">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="password"/>
+                    </request>
+                </method>
+                <method name="GET" id="getArticle">
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="PUT" id="setArticle">
+                    <request>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+                <method name="OPTIONS" id="allowOrigin3"/>
+            </resource>
+            <resource path="/{applicationId}">
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="applicationId"/>
+                <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="template" name="type"/>
+                <method name="OPTIONS" id="allowOrigin1"/>
+                <method name="GET" id="getBoardList">
+                    <request>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="start"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:int" style="query" name="limit"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="where"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="sort"/>
+                        <param xmlns:xs="http://www.w3.org/2001/XMLSchema" type="xs:string" style="query" name="dir"/>
+                    </request>
+                    <response>
+                        <representation mediaType="application/json"/>
+                        <representation mediaType="application/xml"/>
+                    </response>
+                </method>
+            </resource>
+        </resource>
+    </resources>
+</application>
