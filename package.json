@@ -1,7 +1,7 @@
 {
-	"name": "ape.http",
-	"description": "attrs plugin extentions - http service",
-	"version": "0.1.0",
+	"name": "plexi.http",
+	"description": "plexi plugin for http service",
+	"version": "0.0.1",
 	"main": "activator.js",
 	"activator": "activator.js",
 	"dependencies": {

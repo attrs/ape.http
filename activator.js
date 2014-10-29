@@ -17,28 +17,28 @@ var debug = false;
 
 // class Bucket
 function print_bound(bucket, uri, method) {
-	console.log('[' + bucket.bundle.bundleId + '-' + bucket.bundle.version + '] ' + method + ' ' + uri);
+	console.log('[' + bucket.plugin.pluginId + '-' + bucket.plugin.version + '] ' + method + ' ' + uri);
 }
 
-var Bucket = function Bucket(bundle, name) {
+var Bucket = function Bucket(plugin, name) {
 	if( !name ) name = 'default';
 	this.name = name;
-	this.bundle = bundle;
+	this.plugin = plugin;
 	this.mounted = {};
 	this.body = express();
 	
-	buckets[bundle.bundleId + ':' + name] = buckets_versioning[bundle.bundleId + '-' + bundle.version + ':' + name] = this;
+	buckets[plugin.pluginId + ':' + name] = buckets_versioning[plugin.pluginId + '-' + plugin.version + ':' + name] = this;
 };
 
 Bucket.prototype = {
 	mount: function(uri) {
 		var name = this.name;
-		var bundle = this.bundle;
+		var plugin = this.plugin;
 		var router = express();
 		
 		if( typeof(uri) !== 'string' || !uri.startsWith('/') ) return console.error('[ape.http] illegal mount uri [' + uri + ']');
 		
-		var logfilename = bundle.bundleId + '_' + bundle.version + '_' + name;
+		var logfilename = plugin.pluginId + '_' + plugin.version + '_' + name;
 		if( logdir ) {
 			router.use(express.logger({
 				stream: fs.createWriteStream(path.join(logdir, logfilename + '-access.log'), {flags: 'a'}),
@@ -47,8 +47,8 @@ Bucket.prototype = {
 		}
 		
 		router.use(function(req, res, next) {
-			if( bundle ) 
-				res.header('X-Plugin', bundle.bundleId + '-' + bundle.version);
+			if( plugin ) 
+				res.header('X-Plugin', plugin.pluginId + '-' + plugin.version);
 			next();
 		});
 	
@@ -147,17 +147,17 @@ module.exports = {
 		debug = this.options.debug;
 
 		var exports = {
-			create: function(bundle, name) {
-				if( !bundle ) throw new Error('invalid_bundle');
-				var bucket = new Bucket(bundle, name);
+			create: function(plugin, name) {
+				if( !plugin ) throw new Error('invalid_plugin');
+				var bucket = new Bucket(plugin, name);
 				return bucket;
 			},
-			bucket: function(bundleId, name, version) {
+			bucket: function(pluginId, name, version) {
 				if( !name ) name = 'default';
 				var bucket;
-				if( version ) bucket = buckets_versioning[bundleId + '-' + version + ':' + name];
+				if( version ) bucket = buckets_versioning[pluginId + '-' + version + ':' + name];
 				if( bucket ) return bucket; 
-				return buckets[bundleId + ':' + name];
+				return buckets[pluginId + ':' + name];
 			},
 			buckets: function() {
 				return buckets;
