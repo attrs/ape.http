@@ -22,6 +22,9 @@ function print_bound(bucket, uri, method) {
 
 var Bucket = function Bucket(plugin, name) {
 	if( !name ) name = 'default';
+	if( !plugin ) throw new Error('illegal argument:plugin');
+	if( typeof(name) !== 'string' ) throw new Error('illegal argument:name:' + name);
+	
 	this.name = name;
 	this.plugin = plugin;
 	this.mounted = {};
@@ -33,10 +36,16 @@ var Bucket = function Bucket(plugin, name) {
 Bucket.prototype = {
 	mount: function(uri) {
 		var name = this.name;
-		var plugin = this.plugin;
-		var router = express();
+		
+		if( !uri ) {
+			uri = '/' + this.plugin.pluginId;
+			if( name !== 'default' ) uri = '/' + name;
+		}
 		
 		if( typeof(uri) !== 'string' || !uri.startsWith('/') ) return console.error('[ape.http] illegal mount uri [' + uri + ']');
+		
+		var plugin = this.plugin;
+		var router = express();
 		
 		var logfilename = plugin.pluginId + '_' + plugin.version + '_' + name;
 		if( logdir ) {
@@ -65,10 +74,14 @@ Bucket.prototype = {
 		
 		root.use(uri, router);
 		this.mounted[uri] = this;
+		
+		return this;
 	},
 	unmount: function(path) {
 		var router = this.mounted[path];
 		root.use(path, null);
+		
+		return this;
 	},
 	mounts: function() {
 		return this.mounted;
@@ -78,44 +91,53 @@ Bucket.prototype = {
 	},
 	bucket: function(uri, bucket) {
 		if( !(bucket instanceof Bucket) ) return console.error('invalid bucket', uri, bucket);
-		return this.body.use(uri, bucket.body);
+		this.body.use(uri, bucket.body);
+		return this;
 	},
 	use: function(uri, fn) {
 		if( typeof(uri) === 'function' ) return this.filter(uri);
 		
 		print_bound(this, uri, 'ALL');
-		return this.body.use(uri, fn);
+		this.body.use(uri, fn);
+		return this;
 	},
 	get: function(uri, fn) {
 		print_bound(this, uri, 'GET');
-		return this.body.get(uri, fn);
+		this.body.get(uri, fn);
+		return this;
 	},
 	post: function(uri, fn) {
 		print_bound(this, uri, 'POST');
-		return this.body.post(uri, fn);
+		this.body.post(uri, fn);
+		return this;
 	},
 	put: function(uri, fn) {
 		print_bound(this, uri, 'PUT');
-		return this.body.put(uri, fn);
+		this.body.put(uri, fn);
+		return this;
 	},
 	del: function(uri, fn) {
 		print_bound(this, uri, 'DELETE');
-		return this.body.del(uri, fn);
+		this.body.del(uri, fn);
+		return this;
 	},
 	options: function(uri, fn) {
 		print_bound(this, uri, 'OPTIONS');
-		return this.body.options(uri, fn);
+		this.body.options(uri, fn);
+		return this;
 	},
 	static: function(uri, path) {
 		if( fs.statSync(path).isFile() ) {
-			return this.file(uri, path);
+			this.file(uri, path);
 		} else {
-			return this.dir(uri, path);
+			this.dir(uri, path);
 		}
+		return this;
 	},
 	dir: function(uri, path) {
 		print_bound(this, uri, 'DIR');
-		return this.body.use(uri, express.static(path));
+		this.body.use(uri, express.static(path));
+		return this;
 	},
 	file: function(uri, path) {
 		print_bound(this, uri, 'FILE');
@@ -125,7 +147,8 @@ Bucket.prototype = {
 				next();
 			}
 		})(path);
-		return this.body.use(uri, fn);
+		this.body.use(uri, fn);
+		return this;
 	},
 	remove: function(method, uri) {
 		print_bound(this, uri, method + '(remove)');
@@ -136,9 +159,11 @@ Bucket.prototype = {
 				if( o.path === uri ) delete arg[i];				
 			}
 		}
+		return this;
 	},
 	drop: function() {
 		this.body.routes = {};
+		return this;
 	}
 };
 
