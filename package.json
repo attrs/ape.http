@@ -1,7 +1,7 @@
 {
 	"name": "plexi.http",
 	"description": "plexi plugin for http service",
-	"version": "0.0.2",
+	"version": "0.0.5",
 	"main": "activator.js",
 	"activator": "activator.js",
 	"dependencies": {

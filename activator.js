@@ -30,7 +30,7 @@ var Bucket = function Bucket(plugin, name) {
 	this.mounted = {};
 	this.body = express();
 	
-	buckets[plugin.pluginId + ':' + name] = buckets_versioning[plugin.pluginId + '-' + plugin.version + ':' + name] = this;
+	buckets[plugin.pluginId + ':' + name] = buckets_versioning[plugin.pluginId + '@' + plugin.version + ':' + name] = this;
 };
 
 Bucket.prototype = {
@@ -47,7 +47,7 @@ Bucket.prototype = {
 		var plugin = this.plugin;
 		var router = express();
 		
-		var logfilename = plugin.pluginId + '_' + plugin.version + '_' + name;
+		var logfilename = plugin.pluginId + '@' + plugin.version + '-' + name;
 		if( logdir ) {
 			router.use(express.logger({
 				stream: fs.createWriteStream(path.join(logdir, logfilename + '-access.log'), {flags: 'a'}),
@@ -57,7 +57,7 @@ Bucket.prototype = {
 		
 		router.use(function(req, res, next) {
 			if( plugin ) 
-				res.header('X-Plugin', plugin.pluginId + '-' + plugin.version);
+				res.header('X-Plugin', plugin.pluginId + '@' + plugin.version);
 			next();
 		});
 	
@@ -180,7 +180,7 @@ module.exports = {
 			bucket: function(pluginId, name, version) {
 				if( !name ) name = 'default';
 				var bucket;
-				if( version ) bucket = buckets_versioning[pluginId + '-' + version + ':' + name];
+				if( version ) bucket = buckets_versioning[pluginId + '@' + version + ':' + name];
 				if( bucket ) return bucket; 
 				return buckets[pluginId + ':' + name];
 			},
@@ -213,9 +213,9 @@ module.exports = {
 
 		this.exports = exports;
 
-		var port = this.options.port;
+		var port = this.options.port || 8080;
 		var ssl = this.options.ssl;
-		var docbase = this.options.docbase;
+		var docbase = this.options.docbase || path.join(ctx.application.HOME, 'webapps');
 		var debug = this.options.debug;
 		
 		logdir = this.workspace.path('logs');
