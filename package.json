@@ -1,11 +1,13 @@
 {
 	"name": "plexi.http",
 	"description": "plexi plugin for http service",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"main": "activator.js",
-	"activator": "activator.js",
 	"dependencies": {
 		"express": "3.x",		
 		"node-uuid": "*"
+	},
+	"plexi": {
+		"activator": "activator.js"
 	}
 }

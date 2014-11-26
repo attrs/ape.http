@@ -169,7 +169,8 @@ Bucket.prototype = {
 
 module.exports = {
 	start: function(ctx) {
-		debug = this.options.debug;
+		var preference = this.preference;
+		debug = preference.debug;
 
 		var exports = {
 			create: function(plugin, name) {
@@ -211,17 +212,15 @@ module.exports = {
 			}
 		});
 
-		this.exports = exports;
-
-		var port = this.options.port || 8080;
-		var ssl = this.options.ssl;
-		var docbase = this.options.docbase || path.join(ctx.application.HOME, 'webapps');
-		var debug = this.options.debug;
+		var port = preference.port || 8080;
+		var ssl = preference.ssl;
+		var docbase = preference.docbase || path.join(ctx.application.HOME, 'webapps');
+		var debug = preference.debug;
 		
 		logdir = this.workspace.path('logs');
 		if( !fs.existsSync(logdir) ) fs.mkdirSync(logdir);
 
-		if( typeof(port) !== 'number' && port <= 0 ) throw new Error('invalid port option:' + this.options);
+		if( typeof(port) !== 'number' && port <= 0 ) throw new Error('invalid port option:' + JSON.stringify(preference));
 
 		if( debug ) app.use(express.logger({format: ':date - \x1b[1m:method\x1b[0m \x1b[36m:status \x1b[33m:url\x1b[0m, :response-time ms'}));			
 		app.use(express.logger({stream: fs.createWriteStream(path.join(logdir, 'access.log'), {flags: 'a'}), format: ':date - :method :status :url :remote-addr [HTTP/:http-version :res[content-length] :referrer :user-agent :response-time ms]' }));
@@ -250,7 +249,7 @@ module.exports = {
 
 			next();
 		});
-		app.use(attrs.poweredBy('Attributes, Express'));
+		app.use(attrs.poweredBy('Plexi, Express'));
 		app.use(root);
 		app.use(attrs.errorlog({ showMessage: false, showStack: true, logErrors: path.join(logdir, 'error.log') }));
 		app.use(attrs.errorsend({ showStack: true }));
@@ -281,6 +280,8 @@ module.exports = {
 				console.log('HTTP Server listening on port ' + port + ', with [' + (docbase || 'none') + ']');			
 			});
 		}
+		
+		return exports;
 	},
 	stop: function(ctx) {
 		if( httpd ) httpd.close();
