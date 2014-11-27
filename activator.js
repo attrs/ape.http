@@ -4,6 +4,7 @@ var express = require('express');
 var fs = require('fs');
 var path = require('path');
 var attrs = require('./attrs.express.js');
+var wrench = require('wrench')
 
 var buckets = {};
 var buckets_versioning = {};
@@ -213,12 +214,11 @@ module.exports = {
 		});
 
 		var port = preference.port || 8080;
-		var ssl = preference.ssl;
-		var docbase = preference.docbase || path.join(ctx.application.HOME, 'webapps');
+		var ssl = preference.ssl;		
 		var debug = preference.debug;
-		
-		logdir = this.workspace.path('logs');
-		if( !fs.existsSync(logdir) ) fs.mkdirSync(logdir);
+				
+		// create & get log dir path
+		logdir = this.logger.dir(true);
 
 		if( typeof(port) !== 'number' && port <= 0 ) throw new Error('invalid port option:' + JSON.stringify(preference));
 
@@ -227,8 +227,22 @@ module.exports = {
 		app.use(express.compress());
 		app.use(express.favicon());
 		app.use(attrs.charset('utf-8'));
-
-		if( docbase ) app.use(express.static(docbase));
+		
+		// init docbase
+		if( preference.docbase !== false ) {
+			var docbase = preference.docbase || path.join(ctx.application.HOME, 'webapps');
+			if( !fs.existsSync(docbase) ) {
+				fs.mkdirSync(docbase);
+				console.log('from', path.join(__dirname, 'initial-page'));
+				console.log('to', docbase);
+				wrench.copyDirSyncRecursive(path.join(__dirname, 'initial-page'), docbase, {
+					forceDelete: true,
+					preserveFiles: true
+				});
+			}
+			
+			app.use(express.static(docbase));
+		}
 
 		var SESSION = {};
 		app.use(express.bodyParser());
