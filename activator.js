@@ -230,11 +230,11 @@ module.exports = {
 		
 		// init docbase
 		if( preference.docbase !== false ) {
-			var docbase = preference.docbase || path.join(ctx.application.HOME, 'webapps');
+			var docbase = preference.docbase ? path.resolve(ctx.application.home, preference.docbase) : path.resolve(ctx.application.home, 'www');
+			console.log('ctx.home', ctx.application.home);
+			console.log('plexi.http:docbase is "' + docbase + '"');
 			if( !fs.existsSync(docbase) ) {
 				fs.mkdirSync(docbase);
-				console.log('from', path.join(__dirname, 'initial-page'));
-				console.log('to', docbase);
 				wrench.copyDirSyncRecursive(path.join(__dirname, 'initial-page'), docbase, {
 					forceDelete: true,
 					preserveFiles: true
