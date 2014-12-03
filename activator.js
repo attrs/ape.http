@@ -18,7 +18,7 @@ var debug = false;
 
 // class Bucket
 function print_bound(bucket, uri, method) {
-	console.log('[' + bucket.plugin.pluginId + '-' + bucket.plugin.version + '] ' + method + ' ' + uri);
+	console.log('[' + bucket.plugin.id + '] ' + method + ' ' + uri);
 }
 
 var Bucket = function Bucket(plugin, name) {
@@ -31,7 +31,7 @@ var Bucket = function Bucket(plugin, name) {
 	this.mounted = {};
 	this.body = express();
 	
-	buckets[plugin.pluginId + ':' + name] = buckets_versioning[plugin.pluginId + '@' + plugin.version + ':' + name] = this;
+	buckets[plugin.name + ':' + name] = buckets_versioning[plugin.name + '@' + plugin.version + ':' + name] = this;
 };
 
 Bucket.prototype = {
@@ -39,7 +39,7 @@ Bucket.prototype = {
 		var name = this.name;
 		
 		if( !uri ) {
-			uri = '/' + this.plugin.pluginId;
+			uri = '/' + this.plugin.name;
 			if( name !== 'default' ) uri = '/' + name;
 		}
 		
@@ -48,7 +48,7 @@ Bucket.prototype = {
 		var plugin = this.plugin;
 		var router = express();
 		
-		var logfilename = plugin.pluginId + '@' + plugin.version + '-' + name;
+		var logfilename = plugin.name + '@' + plugin.version + '-' + name;
 		if( logdir ) {
 			router.use(express.logger({
 				stream: fs.createWriteStream(path.join(logdir, logfilename + '-access.log'), {flags: 'a'}),
@@ -58,7 +58,7 @@ Bucket.prototype = {
 		
 		router.use(function(req, res, next) {
 			if( plugin ) 
-				res.header('X-Plugin', plugin.pluginId + '@' + plugin.version);
+				res.header('X-Plugin', plugin.name + '@' + plugin.version);
 			next();
 		});
 	
@@ -170,7 +170,7 @@ Bucket.prototype = {
 
 module.exports = {
 	start: function(ctx) {
-		var preference = this.preference;
+		var preference = ctx.preference;
 		debug = preference.debug;
 
 		var exports = {
@@ -179,12 +179,12 @@ module.exports = {
 				var bucket = new Bucket(plugin, name);
 				return bucket;
 			},
-			bucket: function(pluginId, name, version) {
+			bucket: function(pluginName, name, version) {
 				if( !name ) name = 'default';
 				var bucket;
-				if( version ) bucket = buckets_versioning[pluginId + '@' + version + ':' + name];
+				if( version ) bucket = buckets_versioning[pluginName + '@' + version + ':' + name];
 				if( bucket ) return bucket; 
-				return buckets[pluginId + ':' + name];
+				return buckets[pluginName + ':' + name];
 			},
 			buckets: function() {
 				return buckets;
@@ -213,12 +213,12 @@ module.exports = {
 			}
 		});
 
-		var port = preference.port || 8080;
+		var port = preference.port || 9090;
 		var ssl = preference.ssl;		
 		var debug = preference.debug;
 				
 		// create & get log dir path
-		logdir = this.logger.dir(true);
+		logdir = ctx.logger.dir(true);
 
 		if( typeof(port) !== 'number' && port <= 0 ) throw new Error('invalid port option:' + JSON.stringify(preference));
 
@@ -253,7 +253,7 @@ module.exports = {
 			req.session = SESSION;
 			var send = res.send;
 			res.send = function(obj, status, msg) {				
-				this.app.set('json spaces', '\t');
+				ctx.app.set('json spaces', '\t');
 				if( obj === null || obj === undefined ) {
 					return send.apply(res, [204]);
 				}
@@ -287,11 +287,11 @@ module.exports = {
 			});
 			
 			httpsd.listen((ssl.port || 443), function() {
-				console.log('HTTP Server listening on port ' + (ssl.port || 443) + ', with [' + JSON.stringify(ssl) + ']');			
+				console.log('HTTP Server listening on port ' + (ssl.port || 443) + ', ssl options [' + JSON.stringify(ssl) + ']');			
 			});
 		} else {		
 			httpd.listen(port || 80, function() {
-				console.log('HTTP Server listening on port ' + port + ', with [' + (docbase || 'none') + ']');			
+				console.log('HTTP Server listening on port ' + port + ', docbase [' + (docbase || 'none') + ']');			
 			});
 		}
 		
