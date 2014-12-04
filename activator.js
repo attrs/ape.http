@@ -174,9 +174,9 @@ module.exports = {
 		debug = preference.debug;
 
 		var exports = {
-			create: function(plugin, name) {
-				if( !plugin ) throw new Error('invalid_plugin');
-				var bucket = new Bucket(plugin, name);
+			create: function(name) {
+				if( !name ) name = 'default';
+				var bucket = new Bucket(this, name);
 				return bucket;
 			},
 			bucket: function(pluginName, name, version) {
