@@ -119,7 +119,12 @@ Bucket.prototype = {
 	},
 	del: function(uri, fn) {
 		print_bound(this, uri, 'DELETE');
-		this.body.del(uri, fn);
+		this.body.delete(uri, fn);
+		return this;
+	},
+	delete: function(uri, fn) {
+		print_bound(this, uri, 'DELETE');
+		this.body.delete(uri, fn);
 		return this;
 	},
 	options: function(uri, fn) {
@@ -170,8 +175,8 @@ Bucket.prototype = {
 
 module.exports = {
 	start: function(ctx) {
-		var preference = ctx.preference;
-		debug = preference.debug;
+		var options = ctx.preference;
+		debug = options.debug;
 
 		var exports = {
 			create: function(name) {
@@ -213,14 +218,14 @@ module.exports = {
 			}
 		});
 
-		var port = preference.port || 9090;
-		var ssl = preference.ssl;		
-		var debug = preference.debug;
+		var port = options.port || 9090;
+		var ssl = options.ssl;		
+		var debug = options.debug;
 				
 		// create & get log dir path
 		logdir = ctx.logger.dir(true);
 
-		if( typeof(port) !== 'number' && port <= 0 ) throw new Error('invalid port option:' + JSON.stringify(preference));
+		if( typeof(port) !== 'number' && port <= 0 ) throw new Error('invalid port option:' + JSON.stringify(options));
 
 		if( debug ) app.use(express.logger({format: ':date - \x1b[1m:method\x1b[0m \x1b[36m:status \x1b[33m:url\x1b[0m, :response-time ms'}));			
 		app.use(express.logger({stream: fs.createWriteStream(path.join(logdir, 'access.log'), {flags: 'a'}), format: ':date - :method :status :url :remote-addr [HTTP/:http-version :res[content-length] :referrer :user-agent :response-time ms]' }));
@@ -229,14 +234,14 @@ module.exports = {
 		app.use(attrs.charset('utf-8'));
 		
 		// init docbase
-		if( preference.docbase !== false ) {
-			var docbase = preference.docbase ? path.resolve(ctx.application.home, preference.docbase) : path.resolve(ctx.application.home, 'www');
+		if( options.docbase !== false ) {
+			var docbase = options.docbase ? path.resolve(ctx.application.home, options.docbase) : path.resolve(ctx.application.home, 'www');
 			console.log('ctx.home', ctx.application.home);
 			console.log('plexi.http:docbase is "' + docbase + '"');
 			if( !fs.existsSync(docbase) ) {
 				fs.mkdirSync(docbase);
-				wrench.copyDirSyncRecursive(path.join(__dirname, 'initial-page'), docbase, {
-					forceDelete: true,
+				wrench.copyDirSyncRecursive(path.join(__dirname, 'www'), docbase, {
+					forceDelete: false,
 					preserveFiles: true
 				});
 			}
@@ -294,6 +299,22 @@ module.exports = {
 				console.log('HTTP Server listening on port ' + port + ', docbase [' + (docbase || 'none') + ']');			
 			});
 		}
+		
+		// bower support
+		var bower = require('bower');
+
+		bower.commands
+		.list({ paths: true, json: true })
+		.on('end', function (pkgs) {			
+			var bucket = new Bucket(ctx.plugin);
+			bucket.mount(options.boweruri || '/bower');
+			
+		    for(var name in pkgs) {
+				var p = path.resolve(ctx.application.home, pkgs[name]);
+				console.log(name, p);
+		    	bucket.static('/' + name, p);
+		    }
+		});
 		
 		return exports;
 	},

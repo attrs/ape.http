@@ -12,3 +12,4 @@ build/
 plexi_modules/
 workspace/
 logs/
+bower_components/
