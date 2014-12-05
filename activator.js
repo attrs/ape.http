@@ -321,5 +321,7 @@ module.exports = {
 	stop: function(ctx) {
 		if( httpd ) httpd.close();
 		if( httpsd ) httpsd.close();
+		
+		console.log('[' + ctx.id + '] stopped');
 	}
 };
