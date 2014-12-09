@@ -1,0 +1,67 @@
+{
+	"preferences": {
+		"plexi.http": {
+			"servers": {
+				"front": {
+					"port": 9090,
+					"session": {
+						"type": "redis",
+						"host": "127.0.0.1",
+						"port": 6379
+					},
+					"logging": {
+						"access": ":date - :method :status :url :remote-addr [:res[content-length] :referrer :user-agent :response-time ms]",
+						"error": ":date - :method :status :url :remote-addr [:res[content-length] :referrer :user-agent :response-time ms]",
+						"console": "error",
+						"web": true
+					},
+					"host": ["attrs.io", "*.attrs.io"],
+					"docbase": {
+						"commons": "www/commons",
+						"mobile": "www/mobile",
+						"*": "www/web"
+					},
+					"bower": true,
+					"statuspage": true,
+					"vhost": [
+						{
+							"name": "mobile",
+							"host": "m.attrs.io",
+							"docbase": {
+								"commons": "www/commons",
+								"*": "www/mobile"
+							},
+							"bower": true
+						}, {
+							"name": "mobile",
+							"host": "*.attrs.io",
+							"docbase": "www/:1",
+							"bower": false,
+							"statuspage": false
+						}, {
+							"name": "admin",
+							"host": "admin.attrs.io",
+							"forward": 9081
+						}, {
+							"host": "forward.attrs.io",
+							"forward": "http://google.com"
+						}
+					],
+					"mapping": {
+						"pluginname": "m.attrs.io",
+						"pluginname@version": "*.attrs.io",
+						"pluginname@version:bucketname": "admin.attrs.io",
+						"*": "*"
+					}
+				},
+				"admin": {
+					"port": 9091,
+					"docbase": "www/admin",
+					"mapping": {
+						"plexi.workbench": "*"
+					}
+				}
+			}
+		}
+	}
+}
