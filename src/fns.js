@@ -20,23 +20,44 @@ function vhost(basedir, main, sub) {
 	return router;
 }
 
-function docbase(options) {
-	options = options || {};
-	
-	var fn;
-	if( typeof options === 'string' ) {
-		
-	} else if( typeof options === 'object' ) {
-		
-	} else {
-		fn = function(req, res, next) {
-		};
+function docbase(basedir, options) {
+	if( arguments.length === 1 ) {
+		if( typeof(basedir) === 'string' ) {
+			return express.static(basedir);
+		} else {
+			options = basedir;
+			basedir = null;
+		}
 	}
 	
-	return function(req, res, next) {
-		console.log('docbase', options);
-		next();
-	};
+	if( !basedir ) basedir = '';
+	
+	var dirs = {};
+	if( typeof(options) === 'string' ) {
+		return express.static(path.resolve(basedir, options));
+	} else if( typeof(options) === 'object' ) {		
+		for(var k in options) {
+			dirs[k] = options[k] ? express.static(path.resolve(basedir, options[k])) : null;
+		}
+	} else {
+		throw new Error('illegal docbase options');
+	}
+	
+	var routers = [];	
+	routers.push(function(req, res, next) {
+		//var ua = req.get('User-Agent');
+		var ua = req.query.ua;
+		if( dirs[ua] ) dirs[ua](req, res, next);
+		else if( dirs['*'] ) dirs['*'](req, res, next);
+		else next();
+	});
+	
+	if( dirs.common ) {
+		routers.push(function(req, res, next) {
+			dirs.common(req, res, next);
+		});
+	}
+	return routers;		
 }
 
 
