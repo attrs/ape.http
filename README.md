@@ -1,4 +1,3 @@
-ape.http
+plexi.http
 ========
 
-plugin for http service
