@@ -1,6 +1,6 @@
 var Server = require('../src/Server.js');
 var Bucket = require('../src/Bucket.js');
-var config = require('../plexi.json');
+var config = require('./plexi.json');
 var options = config.preferences['plexi.http'];
 var servers = options.servers;
 
