@@ -2,62 +2,62 @@
 	"preferences": {
 		"plexi.http": {
 			"servers": {
-				"front": {
-					"port": 9090,
+				"default": {
+					"port": 9000,
+					"docbase": {
+						"*": "test/www/front",
+						"admin.attrs.io": "test/www/admin",
+						"m.attrs.io": "test/www/mobile"
+					}
+				},
+				"google": {
+					"port": 9003,
+					"forward": "http://google.com"
+				},
+				"admin": {
+					"host": "admin.attrs.io",
+					"port": 9092,
+					"docbase": "test/www/admin",
+					"mapping": [
+						"pluginname*",
+						"pluginname@version*",
+						"pluginname@*:bucketname"
+					]
+				},
+				"attrs": {
+					"host": "*.attrs.io",
+					"alias": "attrs.io",
+					"port": 9091,
+					"docbase": "test/www/:1",
+					"favicon": "www/favicon.ico",
+					"compress": true,
+					"charset": "utf8",
 					"session": {
+						"type": "default",
 						"resave": true,
 						"saveUninitialized": true,
 						"secret": "tlzmflt"
 					},
+					"mount": {
+						"./bower_components": "/bower"
+					},
+					"statuspage": true,
 					"logging": {
 						"access": ":date - :method :status :url :remote-addr [:res[content-length] :referrer :user-agent :response-time ms]",
 						"error": ":date - :method :status :url :remote-addr [:res[content-length] :referrer :user-agent :response-time ms]",
-						"console": "error",
+						"console": true,
+						"stack": true,
 						"web": true
 					},
-					"docbase": {
-						"commons": "www/commons",
-						"mobile": "www/mobile",
-						"*": "www/web"
+					"filters": {
+						"*.php": "php",
+						"*.jsp": "tomcat",
+						"*.do": "tomcat",
+						"*.jsx": "node-jsx",
+						"/servlets/*": "tomcat",
+						"/WEB-INF/*": false
 					},
-					"bower": "libs",
-					"statuspage": true,
-					"vhost": [
-						{
-							"host": "m.attrs.io",
-							"docbase": {
-								"commons": "www/commons",
-								"*": "www/mobile"
-							},
-							"bower": true
-						}, {
-							"host": "*.attrs.io",
-							"docbase": "www/:1",
-							"bower": false,
-							"statuspage": false,
-							"inherit": false
-						}, {
-						
-							"host": "admin.attrs.io",
-							"forward": 9081
-						}, {
-							"host": "forward.attrs.io",
-							"forward": "http://google.com"
-						}
-					],
-					"mapping": {
-						"pluginname*": "m.attrs.io",
-						"pluginname@version*": "*.attrs.io",
-						"pluginname@*:bucketname": ["admin.attrs.io", "forward.attrs.io"],
-						"*": "*"
-					}
-				},
-				"admin": {
-					"port": 9091,
-					"docbase": "www/admin",
-					"mapping": {
-						"plexi.workbench": "*"
-					}
+					"mapping": "*"
 				}
 			}
 		}

@@ -17,145 +17,6 @@ var https = require('https');
 var http = require('http');
 var fns = require('./fns.js');
 
-//console.log('stack', app.stack);
-//console.log('routes', app.routes);
-
-// class Cors
-function Cors(server, options) {
-	var app = this.router = express();
-	this.options = options = options || {};
-	app.use(fns.cors(options));
-}
-Cors.prototype = {
-	accept: function(uri, methods, headers) {
-	},
-	get: function(uri) {
-		return {
-			origins: ['*'],
-			methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
-			headers: ['Content-Type', 'Authorization', 'Content-Length', 'X-Requested-With']
-		}
-	}
-};
-
-// class VHost
-function VHost(vhosts, options) {	
-	this.vhosts = vhosts;
-	this.router = express();
-	this.reset(options);
-}
-VHost.prototype = {
-	reset: function(options) {
-		var options = this.options = options || this.options || {};
-		
-		if( !options.host || typeof(options.host) !== 'string' ) throw new Error('illegal host value in vhost:' + option.host);
-		
-		var basedir = this.vhosts.server.basedir;
-		var bucbketbody = express();		
-		var router = this.router;
-		
-		router.use(fns.docbase(basedir, options.docbase));
-		router.use(bucbketbody);
-
-		/* TODO: add cors access control feature
-			var cors = new Cors(this, options.cors);
-			this.cors = cors;
-			app.use(cors.router);
-		*/
-		
-		this.host = options.host;
-		this.bucbketbody = bucbketbody;
-		
-		return this;
-	},
-	docbase: function(docbase) {
-		this.options.docbase = docbase;
-		this.reset();
-		return this;
-	},
-	add: function(bucket) {
-		
-	},
-	remove: function(bucket) {
-		
-	},
-	buckets: function() {
-		
-	}
-};
-
-// class VHosts
-function VHosts(server, mapping) {
-	this.server = server;
-	this.mapping(mapping);
-	this.router = express();
-}
-VHosts.prototype = {
-	mapping: function(mapping) {
-		if( !arguments.length ) return this.mapping;
-		if( typeof(mapping) === 'object' ) {
-			this.mapping = mapping;
-			// drop all buckets
-			this.vhosts.forEach(function(vhost) {
-				vhost.dropAll();
-			});
-			
-			// rebound all buckets
-		} else {
-			console.error('illegal vhost mapping rule'.red, mapping);
-		}
-		return this;
-	},
-	// create new vhost
-	create: function(options) {
-		var router = this.router;
-		var vhosts = this.vhosts;
-		var v = vhosts[options.host] = new VHost(self, options);
-		router.use(vhost(v.host, v.router));
-	},
-	// drop vhost
-	drop: function(host) {
-		
-	},
-	// get vhost names
-	hostnames: function() {
-		var arg = [];
-		this.vhosts.forEach(function(vhost) {
-			arg.push(vhost.host);
-		});
-		return arg;
-	},
-	all: function() {
-		var arg = [];
-		this.vhosts.forEach(function(vhost) {
-			arg.push(vhost);
-		});
-		return arg;
-	},
-	// get vhost by name or bucket
-	get: function(name) {
-		if( !name ) return null;
-		if( name instanceof Bucket ) return this.getByBucketName(name.name);
-		
-		return this.vhosts[name];
-	},
-	// get vhost by bucket name
-	getByBucketName: function(name) {
-		var bucket = name;
-		var bucketname = bucket.name;
-		
-		var mapping = this.mapping;
-		for(var k in mapping) {
-			var regexp = new RegExp('^(' + k.split('*').join(').*(') + ')$');
-			var matched = bucketname.match(regexp) ? true : false;
-			if( matched ) {
-				return this.get(k);
-			}
-		}
-		
-		return null;
-	}
-};
 
 // mapping regexp test
 (function() {
@@ -172,165 +33,155 @@ VHosts.prototype = {
 
 // class Server
 function Server(options) {
-	this.reset(options);
+	if( options && typeof options !== 'object' ) return console.error('illegal argument', options);
+	this.options = options || {};
+	this.router = express();
 };
 
 Server.prototype = {
-	reset: function(options) {
-		var options = this.options = options || this.options || {};
-		var basedir = this.basedir = options.basedir || process.cwd();
-		var setting = options.setting || {};
-					
-		var commons = express();
+	// listen & close
+	listen: function(callback) {
+		if( this.httpd ) return console.error('already listen', this.port);
 		
-		var vhosts = new VHosts(this, {
-			main: {
-				host: options.host,
-				forward: options.forward,
-				docbase: options.docbase,
-				bower: options.bower,
-				statuspage: options.statuspage
-			},
-			vhost: options.vhost
-		});
+		var cwd = process.cwd();
+		var options = this.options;
+		var variables = options.variables || {};
 				
-		var app = express();		
+		var app = express();
+				
 		// set settings
 		app.set('json spaces', '\t');
-		for(var k in setting ) {
-			if( setting.hasOwnProperty(k) ) app.set(k, setting[k]);
-		}		
+		for(var k in variables ) app.set(k, variables[k]);
 		
-		app.use(favicon(options.favicon || path.resolve(__dirname, '../www', 'favicon.ico')));
+		app.use(fns.logging(options.logging));		
+		if( options.favicon ) app.use(favicon(options.favicon));
+		if( options.compress ) app.use(compression( (typeof options.compress === 'number' ? {threshold: options.compress} : {}) ));
 		app.use(fns.charset(options.charset || 'utf8'));
 		app.use(methodoverride());
-		app.use(session(options.session || { secret: 'tlzmflt' }));
+		app.use(cookiesession(options.session || { secret: 'tlzmflt' }));
 		app.use(bodyparser.json());
 		app.use(bodyparser.urlencoded({ extended: true }));
 		app.use(multer());
 		app.use(csurf());
-
-		app.use(vhost.router);
-		app.use(commons);
-				
-		this.router = app;
-		this.vhosts = vhost;
-				
-		// translate vhost array to map
-		var self = this;
-		(options.vhost || []).forEach(function(option) {
-			self.create(option);
-		});
+		app.use(this.router);
 		
-		return this;
-	},
-	
-	// vhost find & create
-	vhost: function(name, options) {
-		if( arguments.length === 1 ) return this.vhosts.get(name);
-		
-		this.vhosts.create(name, options);
-		return this;
-	},
-	
-	// bucket bound & mount
-	mount: function(uri, bucket) {
-		if( !uri ) throw new TypeError('missing uri');
-		if( uri.indexOf('/') ) uri = '/' + uri;
-		
-		// find mapped vhost
-		
-		
-		return this;
-	},
-	unmount: function(bucket) {
-		var router = this.mounted[path];
-		root.use(path, null);
-		
-		return this;
-	},
-	mounts: function() {
-		return this.mounted;
-	},
-	buckets: function(filter) {
-	},
-	
-	// listen & close
-	listen: function(port, ssl) {
-		this.close();
-		
-		var callback;
-		if( typeof(port) === 'function' ) {
-			callback = port;
-			port = null;
+		// mount
+		for(var file in options.mount) {
+			var p = options.mount[file];
+			app.use(p, express.static(path.resolve(cwd, file)));
 		}
 		
-		var ssl = ssl || this.options.ssl;
-		var port = port || this.options.port || (ssl ? 9443 : 9080);		
-		var app = this.router;
+		// host & docbase
+		var docbase = options.docbase;
+		if( options.host ) {
+			var _app = app;
+			app = express();
+			app.use(vhost(options.host, _app));
+			
+			if( docbase ) {
+				app.use(function(req, res, next) {
+					var dir;		
+					if( typeof docbase === 'object' ) {
+						var host = req.hostname;
+						dir = docbase[host];
+						if( !dir ) dir = docbase['*'];
+					} else if( typeof docbase === 'string' ){
+						dir = docbase;
+						
+						if( req.vhost && ~docbase.indexOf(':') ) {
+							dir = dir.split(':1').join(req.vhost[0])
+							.split(':2').join(req.vhost[1])
+							.split(':3').join(req.vhost[2])
+							.split(':4').join(req.vhost[3])
+							.split(':5').join(req.vhost[4]);
+						}
+					}
+					if( dir ) express.static(path.resolve(cwd, dir))(req, res, next);
+					else res.sendStatus(404);
+				});
+			}
+		} else {
+			if( typeof docbase === 'string' ) {
+				app.use(express.static(path.resolve(cwd, docbase)));
+			} else if( typeof docbase === 'object' ) {
+				app.use(function(req, res, next) {
+					var host = req.hostname;
+					var dir = docbase[host];
+					if( !dir ) dir = docbase['*'];
+					if( dir ) express.static(path.resolve(cwd, dir))(req, res, next);
+					else res.sendStatus(404);
+				});
+			}
+		}
+		
+		if( options.statuspage ) {
+			app.use('/status.json', function(req, res, next) {
+				res.send(options.status || {
+					options: options,
+					port: port
+				});
+			});
+		}
+		
+		// default callback
+		callback = callback || function(err, port) {
+			if( err && err.code == 'EADDRINUSE' ) console.log('Port in use...', port);
+			else if( err ) console.log('Listen failure', err);
+			
+			console.log('HTTP Server listening on port ' + port, docbase || '(no docbase)');
+		};
+		
+		
+		// create server		
+		var ssl = ssl || options.ssl;
+		var port = port || options.port || (ssl ? 9443 : 9080);		
 		
 		var httpd;
 		if( ssl ) httpd = https.createServer(ssl, app);
 		else httpd = http.createServer(app);
 		
 		httpd.on('error', function (e) {
-			if( callback ) callback(e);
-			else if( e && e.code == 'EADDRINUSE' ) console.log('Port in use...', port);
-			else console.log('Listen failure', e);
-		});
-		
+			callback(e, port);
+		});		
 		httpd.listen(port, function() {				
-			if( callback ) callback(null, port);
-			else console.log('HTTP Server listening on port ' + port);
+			callback(null, port);
 		});
 
-		Object.defineProperty(this, 'port', {
-			value: port,
-			configurable: true,
-			enumerable: false,
-			writable: false
-		});
-	
-		Object.defineProperty(this, 'server', {
-			value: httpd,
-			configurable: true,
-			enumerable: false,
-			writable: false
-		});
+		this.httpd = httpd;
+		this.port = port;
 		
 		return this;
 	},
+	mount: function(uri, bucket) {
+		if( typeof uri !== 'string' || uri.indexOf('/') !== 0 ) return console.error('invalid uri', uri);
+		if( !bucket || !bucket.router ) return console.error('invalid bucket', bucket);
+		this.router.use(uri, bucket.router);
+		return this;
+	},
 	close: function(callback) {
-		if( this.server ) {
-			var port = this.port;
-			
-			try {
-				var self = this;
-				this.server.close(function() {
-					Object.defineProperty(self, 'port', {
-						value: null,
-						configurable: true,
-						enumerable: false,
-						writable: false
-					});
-		
-					Object.defineProperty(self, 'server', {
-						value: null,
-						configurable: true,
-						enumerable: false,
-						writable: false
-					});
+		if( this.httpd ) {
+			var port = this.port;			
+			var self = this;
+			this.httpd.close(function() {
+				if( callback ) callback(null, port);
+				else console.log('HTTP Server closed, port ' + port);
 				
-					if( callback ) callback(null, port);
-					else console.log('HTTP Server closed, port ' + port);
-				});
-			} catch(err) {
-				if( callback ) callback(err);
-				else throw err;
-			}
+				self.server = null;
+				self.port = null;
+			});
+		} else {
+			if( callback ) callback('server is not listen');
 		}
 		return this;
 	}
+};
+
+var filters = {};
+Server.filter = function(name, filter) {
+	if( typeof name !== 'string' || !name ) return console.error('illegal argument', name);
+	if( typeof filter !== 'function' ) return console.error('filter must be a function', filter);
+	filters[name] = filter;
+	return this;
 };
 
 module.exports = Server;

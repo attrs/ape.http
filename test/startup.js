@@ -2,12 +2,10 @@ var Server = require('../src/Server.js');
 var Bucket = require('../src/Bucket.js');
 var config = require('../plexi.json');
 var options = config.preferences['plexi.http'];
-var servers = options.servers || options;
+var servers = options.servers;
 
 for(var k in servers) {
-	var o = servers[k];
-	o.basedir = process.cwd();
-	
+	var o = servers[k];	
 	var server = new Server(o).listen();
 	
 	var bucket = new Bucket('test');

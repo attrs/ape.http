@@ -9,8 +9,27 @@ var Bucket = require('./Bucket.js');
 var wrench = require('wrench');
 
 var servers = {};
+var buckets = {};
 
 module.exports = {
+	detect: function(ctx) {
+		ctx.services.create('http', {
+			create: function(config) {
+				return new Bucket(this, config);				
+			}
+		});
+		
+		// in plugin
+		var http = ctx.services.get('http');		
+		var bucket = http.create('a');
+		bucket.static('images', path.join(__dirname, 'www/images'));
+		bucket.get('server', function(req, res, next) {
+			res.send('ok.');
+		});
+		bucket.mount('/test');
+		var server = bucket.server();
+		server.stop().start();
+	},
 	start: function(ctx) {
 		var options = ctx.preference;
 		options.servers = options.servers || {default:options};
@@ -88,7 +107,7 @@ module.exports = {
 					arg.push(k);
 				}
 				return arg;
-			}
+			},
 			get provider() {
 				return ctx.name;
 			},

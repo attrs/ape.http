@@ -4,7 +4,7 @@
   "version": "0.1.3",
   "main": "src/main.js",
   "scripts": {
-	"start": "node src/startup.js",
+	"start": "node test/startup.js",
     "test": "jasmine-node --test-dir test --watch src *.json --autotest --color"
   },
   "dependencies": {

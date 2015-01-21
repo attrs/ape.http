@@ -60,14 +60,6 @@ function docbase(basedir, options) {
 	return routers;		
 }
 
-
-function logging(options) {
-	options = options || {};
-	return function(req, res, next){
-		next();
-	};
-}
-
 function bower(options) {
 	options = options || {};
 	
@@ -134,6 +126,17 @@ function cors(options) {
 	};
 };
 
+
+
+
+
+
+function logging(options) {
+	options = options || {};
+	return function(req, res, next){
+		next();
+	};
+}
 
 // @deprecated
 function errorlog(options){
