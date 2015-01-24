@@ -1,3 +1,4 @@
+var path = require('path');
 var Server = require('../src/Server.js');
 var Bucket = require('../src/Bucket.js');
 var config = require('./plexi.json');
@@ -12,6 +13,7 @@ for(var k in servers) {
 	bucket.get('/index.html', function(req, res, next) {
 		res.send('bucket index.html');
 	});
+	server.mount('/' + k, bucket);
 	
-	server.mount('/test', bucket);
+	//server.close();
 }

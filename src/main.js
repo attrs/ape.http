@@ -16,6 +16,8 @@ module.exports = function(config) {
 	}
 	
 	return {
+		Server: Server,
+		Bucket: Bucket,
 		buckets: buckets,
 		names: function() {
 			var arr = [];

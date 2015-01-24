@@ -1,3 +1,5 @@
+var Listener = require('./Listener.js');
+
 var express = require('express');
 var multer = require('multer');
 var bodyparser = require('body-parser');
@@ -7,7 +9,9 @@ var csurf = require('csurf');
 var compression = require('compression');
 var cookieparser = require('cookie-parser');
 var cookiesession = require('cookie-session');
+var morgan = require('morgan');
 var vhost = require('vhost');
+var httpProxy = require('http-proxy');
 
 var colors = require('colors');
 var fs = require('fs');
@@ -16,6 +20,7 @@ var uuid = require('uuid');
 var https = require('https');
 var http = require('http');
 var fns = require('./fns.js');
+var httpProxy = require('http-proxy');
 
 
 // mapping regexp test
@@ -34,26 +39,70 @@ var fns = require('./fns.js');
 // class Server
 function Server(options) {
 	if( options && typeof options !== 'object' ) return console.error('illegal argument', options);
-	this.options = options || {};
-	this.router = express();
-};
-
-Server.prototype = {
-	// listen & close
-	listen: function(callback) {
-		if( this.httpd ) return console.error('already listen', this.port);
+	
+	this.options = options = options || {};
+	
+	var cwd = this.options.basedir || process.cwd();
+	var app = express();
+	var body = express.Router();
+	var self = this;
+	
+	// confirm docbase
+	var docbase = function(req, res, next) {
+		var base = options.docbase;
+		if( typeof base === 'object' ) base = base[req.hostname] || base['*'];
 		
-		var cwd = process.cwd();
-		var options = this.options;
-		var variables = options.variables || {};
-				
-		var app = express();
-				
-		// set settings
-		app.set('json spaces', '\t');
-		for(var k in variables ) app.set(k, variables[k]);
+		if( typeof base === 'string' ) {
+			if( req.vhost && ~base.indexOf(':') ) {
+				base = base.split(':1').join(req.vhost[0])
+				.split(':2').join(req.vhost[1])
+				.split(':3').join(req.vhost[2])
+				.split(':4').join(req.vhost[3])
+				.split(':5').join(req.vhost[4]);
+			}
 		
-		app.use(fns.logging(options.logging));		
+			req.docbase = path.resolve(cwd, base);
+		}			
+		next();
+	};
+	
+	// filter middleware
+	var filter = function(req, res, next) {
+		var uri = req.uri;
+		patterns.forEach(function(pattern) {
+			if( uri.match(pattern.regexp) ) {
+				return pattern.filter.apply(self, [req.docbase, req, res, next]);
+			}				
+		});
+		next();
+	};
+	
+	// set settings
+	app.set('json spaces', '\t');
+	for(var k in options.variables ) app.set(k, options.variables[k]);
+	
+	app.use(fns.logging(options.logging));
+	
+	var forward = options.forward;
+	if( forward ) {
+		var forwardoptions = (typeof forward === 'object' ? forward : {forward:forward});
+		var proxy = httpProxy.createProxyServer(forwardoptions);
+		app.use(function(req, res, next) {
+			proxy.web(req, res, { target: forward });
+			
+			/*proxy.on('error', function (err, req, res) {
+				next('Something went wrong. And we are reporting a custom error message.');
+			});
+			
+			proxy.on('proxyRes', function (proxyRes, req, res) {
+				if( proxyRes.statusCode === 404 ) next();
+				else if( !~[200,204].indexOf(proxyRes.statusCode) ) next(proxyRes.statusCode);
+				//console.log('RAW Response from the target', proxyRes.statusCode, JSON.stringify(proxyRes.headers, true, 2));
+			});*/
+		});
+ 	} else {
+		app.use(docbase);
+		app.use(filter);
 		if( options.favicon ) app.use(favicon(options.favicon));
 		if( options.compress ) app.use(compression( (typeof options.compress === 'number' ? {threshold: options.compress} : {}) ));
 		app.use(fns.charset(options.charset || 'utf8'));
@@ -63,125 +112,191 @@ Server.prototype = {
 		app.use(bodyparser.urlencoded({ extended: true }));
 		app.use(multer());
 		app.use(csurf());
-		app.use(this.router);
-		
+	
+		// docbase
+		app.use(function(req, res, next) {
+			if( req.docbase ) express.static(req.docbase)(req, res, next);
+			else next();
+		});
+	
 		// mount
 		for(var file in options.mount) {
 			var p = options.mount[file];
 			app.use(p, express.static(path.resolve(cwd, file)));
 		}
-		
-		// host & docbase
-		var docbase = options.docbase;
-		if( options.host ) {
-			var _app = app;
-			app = express();
-			app.use(vhost(options.host, _app));
-			
-			if( docbase ) {
-				app.use(function(req, res, next) {
-					var dir;		
-					if( typeof docbase === 'object' ) {
-						var host = req.hostname;
-						dir = docbase[host];
-						if( !dir ) dir = docbase['*'];
-					} else if( typeof docbase === 'string' ){
-						dir = docbase;
-						
-						if( req.vhost && ~docbase.indexOf(':') ) {
-							dir = dir.split(':1').join(req.vhost[0])
-							.split(':2').join(req.vhost[1])
-							.split(':3').join(req.vhost[2])
-							.split(':4').join(req.vhost[3])
-							.split(':5').join(req.vhost[4]);
-						}
-					}
-					if( dir ) express.static(path.resolve(cwd, dir))(req, res, next);
-					else res.sendStatus(404);
-				});
-			}
-		} else {
-			if( typeof docbase === 'string' ) {
-				app.use(express.static(path.resolve(cwd, docbase)));
-			} else if( typeof docbase === 'object' ) {
-				app.use(function(req, res, next) {
-					var host = req.hostname;
-					var dir = docbase[host];
-					if( !dir ) dir = docbase['*'];
-					if( dir ) express.static(path.resolve(cwd, dir))(req, res, next);
-					else res.sendStatus(404);
-				});
-			}
-		}
-		
-		if( options.statuspage ) {
-			app.use('/status.json', function(req, res, next) {
-				res.send(options.status || {
-					options: options,
-					port: port
-				});
+	
+		// body router
+		app.use(body);
+	}
+	
+	// status page
+	if( options.statuspage ) {
+		app.use('/status.json', function(req, res, next) {
+			res.send(options.status || {
+				docbase: req.docbase,
+				host: req.hostname,
+				options: options,
+				port: port,
+				forward: forward
 			});
-		}
-		
-		// default callback
-		callback = callback || function(err, port) {
-			if( err && err.code == 'EADDRINUSE' ) console.log('Port in use...', port);
-			else if( err ) console.log('Listen failure', err);
-			
-			console.log('HTTP Server listening on port ' + port, docbase || '(no docbase)');
-		};
-		
-		
-		// create server		
-		var ssl = ssl || options.ssl;
-		var port = port || options.port || (ssl ? 9443 : 9080);		
-		
-		var httpd;
-		if( ssl ) httpd = https.createServer(ssl, app);
-		else httpd = http.createServer(app);
-		
-		httpd.on('error', function (e) {
-			callback(e, port);
-		});		
-		httpd.listen(port, function() {				
-			callback(null, port);
 		});
-
-		this.httpd = httpd;
-		this.port = port;
+	}
+	
+	// error page
+	if( options.errorpage ) {
+		app.use(function(err, req, res, next) {
+			err = JSON.parse(JSON.stringify({
+				message: err.message || err,
+				stack: err.stack || '',
+				status: res.status
+			}));
+			
+			var html = fs.readSync(path.resolve(options.errorpage[err.status] || options.errorpage));
+			html = html.split('{message}').join(err.message)
+					.split('{status}').join(err.status)
+					.split('{stack}').join(err.stack)
+					.split('{error}').join(JSON.stringify(err));
+			res.send(html);
+		});
 		
-		return this;
+		app.use(function(req, res, next) {
+			var err = JSON.parse(JSON.stringify({
+				message: 'Not Found',
+				stack: '',
+				status: res.status
+			}));
+			
+			var html = fs.readSync(path.resolve(options.errorpage[err.status] || options.errorpage));
+			html = html.split('{message}').join(err.message)
+					.split('{status}').join(err.status)
+					.split('{stack}').join(err.stack)
+					.split('{error}').join(JSON.stringify(err));
+			res.send(html);
+		});
+	}
+	
+	var uri = options.uri;
+	if( uri ) {
+		var _app = app;
+		app = express();
+		if( !Array.isArray(uri) ) uri = [uri];
+		uri.forEach(function(path) {
+			app.use(path, _app);
+		});
+	}
+	
+	var hosts = options.host;
+	if( hosts ) {
+		var _app = app;
+		app = express();
+		if( !Array.isArray(hosts) ) hosts = [hosts];
+		hosts.forEach(function(host) {
+			app.use(vhost(host, _app));				
+		});
+	}
+	
+	this.host = options.host;
+	this.uri = options.uri;
+	this.router = app;
+	this.body = body;
+	
+	/*var test = express.Router();
+	test.use(function a() {});
+	test.get('/test', function b() {});
+	test.all('/test', function c() {});	
+	console.dir(test.stack);*/
+};
+
+Server.prototype = {
+	matches: function(name) {
+		var result = false;
+		(this.options.mappings || []).forEach(function(pattern) {
+			result = new RegExp(pattern).match(name) ? true : false;
+		});
+		return result;
+	},
+	mappings: function() {
+		return this.options.mappings || [];
+	},
+	list: function() {
+		var result = {};
+		this.body.stack.forEach(function(stack) {
+			result[stack.path] = stack.handle;
+		});
+		return result;
 	},
 	mount: function(uri, bucket) {
 		if( typeof uri !== 'string' || uri.indexOf('/') !== 0 ) return console.error('invalid uri', uri);
 		if( !bucket || !bucket.router ) return console.error('invalid bucket', bucket);
-		this.router.use(uri, bucket.router);
+		this.body.use(uri, bucket.router);
 		return this;
 	},
-	close: function(callback) {
-		if( this.httpd ) {
-			var port = this.port;			
-			var self = this;
-			this.httpd.close(function() {
-				if( callback ) callback(null, port);
-				else console.log('HTTP Server closed, port ' + port);
-				
-				self.server = null;
-				self.port = null;
-			});
-		} else {
-			if( callback ) callback('server is not listen');
-		}
+	unmount: function(bucket) {
+		if( !bucket || !bucket.router ) return console.error('invalid bucket', bucket);
+		this.body.stack.forEach(function(stack) {
+			if( stack.handle === bucket.router ) {
+				this.router.stack.splice(this.router.stack.indexOf(stack), 1);
+			}
+		});
+		return this;
+	},
+	clear: function() {
+		this.body.stack = [];
+		return this;
+	},
+	listen: function(callback) {
+		var listener = this.listener = Listener.get(this.options.port);
+		listener.join(this);
+		if( !listener.isListen() ) listener.listen(callback);
+		return this;
+	},
+	close: function() {
+		if( this.listener ) this.listener.drop(this);
 		return this;
 	}
 };
 
+
+// static
+var servers = {};
+Server.get = function(name) {
+	return servers[name];
+};
+Server.all = function() {
+	var arr = [];
+	for(var k in servers) {
+		arr.push(servers[k]);
+	}
+	return arr;
+};
+Server.create = function(name, options) {
+	return servers[name] = new Server(options);
+};
+Server.matches = function(mapping) {
+	var arr = [];
+	for(var name in servers) {
+		var server = servers[name];
+		if( server.matches(mapping) ) {
+			arr.push(server);
+		}
+	}
+	return arr.length ? arr : null;
+};
+
 var filters = {};
-Server.filter = function(name, filter) {
-	if( typeof name !== 'string' || !name ) return console.error('illegal argument', name);
-	if( typeof filter !== 'function' ) return console.error('filter must be a function', filter);
-	filters[name] = filter;
+var patterns = [];
+Server.filter = function(name, options) {
+	if( typeof name !== 'string' || !name ) return console.error('illegal pattern', name);
+	if( typeof options === 'function' ) options = {filter:options};
+	filters[name] = options;
 	return this;
 };
+
+var testFilter = require('./filters/test.js');
+Server.filter('test', {
+	pattern: ['*.test', '/test/*'],
+	filter: testFilter
+});
+
 
 module.exports = Server;

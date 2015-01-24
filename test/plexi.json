@@ -1,22 +1,28 @@
 {
 	"preferences": {
 		"plexi.http": {
+			"listeners": [
+				{
+					"port": 9443
+				}
+			],
 			"servers": {
 				"default": {
-					"port": 9000,
 					"docbase": {
-						"*": "test/www/front",
+						"127.0.0.1": "test/www/front",
+						"localhost": "test/www/front",
+						"attrs.io": "test/www/front",
 						"admin.attrs.io": "test/www/admin",
 						"m.attrs.io": "test/www/mobile"
 					}
 				},
 				"google": {
-					"port": 9003,
-					"forward": "http://google.com"
+					"uri": "/proxy/",
+					"forward": "http://m.attrs.io:9000/"
 				},
 				"admin": {
-					"host": "admin.attrs.io",
-					"port": 9092,
+					"host": ["admin.attrs.io", "system.attrs.io"],
+					"port": 9443,
 					"docbase": "test/www/admin",
 					"mapping": [
 						"pluginname*",
@@ -26,8 +32,6 @@
 				},
 				"attrs": {
 					"host": "*.attrs.io",
-					"alias": "attrs.io",
-					"port": 9091,
 					"docbase": "test/www/:1",
 					"favicon": "www/favicon.ico",
 					"compress": true,
