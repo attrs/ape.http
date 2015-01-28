@@ -6,8 +6,8 @@ var options = config.preferences['plexi.http'];
 var servers = options.servers;
 
 for(var k in servers) {
-	var o = servers[k];	
-	var server = new Server(o).listen();
+	var options = servers[k];	
+	var server = Server.create(options).listen();
 	
 	var bucket = new Bucket('test');
 	bucket.get('/index.html', function(req, res, next) {

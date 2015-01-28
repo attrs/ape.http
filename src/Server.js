@@ -21,20 +21,8 @@ var https = require('https');
 var http = require('http');
 var fns = require('./fns.js');
 var httpProxy = require('http-proxy');
+var minimatch = require("minimatch");
 
-
-// mapping regexp test
-(function() {
-	var id = 'pluginname@version:bucketname';
-	var input = 'pluginname@*:*';///^(pluginname).*(bucketname)/; ///pluginname@^.*/;
-	var regexp = new RegExp('^(' + input.split('*').join(').*(') + ')$');
-	//var regexp = new RegExp('^(pluginname).*(bucketname)$');
-
-	console.log('id', id);
-	console.log('input', input);
-	console.log('regexp', regexp);
-	console.log('test', id.match(regexp));
-});
 
 // class Server
 function Server(options) {
@@ -42,6 +30,7 @@ function Server(options) {
 	
 	this.options = options = options || {};
 	
+	this.debug = options.debug;
 	var cwd = this.options.basedir || process.cwd();
 	var app = express();
 	var body = express.Router();
@@ -195,8 +184,6 @@ function Server(options) {
 		});
 	}
 	
-	this.host = options.host;
-	this.uri = options.uri;
 	this.router = app;
 	this.body = body;
 	
@@ -210,8 +197,12 @@ function Server(options) {
 Server.prototype = {
 	matches: function(name) {
 		var result = false;
-		(this.options.mappings || []).forEach(function(pattern) {
-			result = new RegExp(pattern).match(name) ? true : false;
+		var mapping = this.options.mapping || [];
+		if( typeof mapping === 'string' ) mapping = [mapping];
+		if( !Array.isArray(mapping) ) return console.error('invalid mapping option', this.options.mapping);
+		
+		mapping.forEach(function(pattern) {
+			result = minimatch(name, pattern);
 		});
 		return result;
 	},
@@ -228,6 +219,7 @@ Server.prototype = {
 	mount: function(uri, bucket) {
 		if( typeof uri !== 'string' || uri.indexOf('/') !== 0 ) return console.error('invalid uri', uri);
 		if( !bucket || !bucket.router ) return console.error('invalid bucket', bucket);
+		if( this.debug ) console.log('[plexi.http/' + this.name  + '] mount "' + uri + '" from [' + bucket.name + ']');
 		this.body.use(uri, bucket.router);
 		return this;
 	},
@@ -259,44 +251,64 @@ Server.prototype = {
 
 // static
 var servers = {};
-Server.get = function(name) {
+var filters = {};
+var patterns = [];
+
+var get = function(name) {
 	return servers[name];
 };
-Server.all = function() {
+var all = function() {
 	var arr = [];
 	for(var k in servers) {
 		arr.push(servers[k]);
 	}
 	return arr;
 };
-Server.create = function(name, options) {
-	return servers[name] = new Server(options);
+var create = function(name, options) {
+	if( typeof name === 'object' ) return new Server(name);
+	var server = new Server(options);
+	server.name = name;
+	return servers[name] = server;
 };
-Server.matches = function(mapping) {
+var finds = function(mapping) {
 	var arr = [];
 	for(var name in servers) {
 		var server = servers[name];
-		if( server.matches(mapping) ) {
+		if( server && server.matches(mapping) ) {
 			arr.push(server);
 		}
 	}
 	return arr.length ? arr : null;
 };
-
-var filters = {};
-var patterns = [];
-Server.filter = function(name, options) {
+var find = function(mapping) {
+	for(var name in servers) {
+		var server = servers[name];
+		if( server && server.matches(mapping) ) return server;
+	}
+	return null;
+};
+var filter = function(name, options) {
 	if( typeof name !== 'string' || !name ) return console.error('illegal pattern', name);
 	if( typeof options === 'function' ) options = {filter:options};
 	filters[name] = options;
 	return this;
 };
 
+module.exports = {
+	Server: Server,
+	all: all,
+	get: get,
+	create: create,
+	finds: finds,
+	find: find,
+	filters: filters,
+	filter: filter
+};
+
+
+// test
 var testFilter = require('./filters/test.js');
-Server.filter('test', {
+filter('test', {
 	pattern: ['*.test', '/test/*'],
 	filter: testFilter
 });
-
-
-module.exports = Server;
