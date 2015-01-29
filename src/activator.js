@@ -31,15 +31,20 @@ module.exports = {
 			systemserver: systemserver,
 			create: function(name) {
 				name = name || 'default';
-				var bucketname = this.id + ':' + name;
+				var bucketname = this.id ? this.id + ':' + name : name;
+				
+				if( buckets[bucketname] ) return console.error('already exists bucket name', bucketname);
 				
 				var bucket = new Bucket();
 				bucket.mount = function(uri, tosystem) {
+					if( !uri ) return console.error('invalid uri', uri);
+					
 					var servers = Server.finds(bucketname);
-					if( !servers ) return this;
-					servers.forEach(function(server) {
-						server.mount(uri, bucket);						
-					});
+					if( servers ) {
+						servers.forEach(function(server) {
+							server.mount(uri, bucket);						
+						});
+					}
 					
 					if( tosystem !== false ) systemserver.mount(uri, this);
 					return this;
@@ -51,16 +56,20 @@ module.exports = {
 			},
 			drop: function(name) {
 				name = name || 'default';
-				var bucketname = this.id + ':' + name;
-				
-				var servers = Server.finds(bucketname);
-				if( !servers ) return this;
+				var bucketname = this.id ? this.id + ':' + name : name;
 				
 				var bucket = buckets[bucketname];
-				servers.forEach(function(server) {
-					server.unmount(bucket);			
-				});
-				systemserver.unmount(bucket);
+				if( bucket ) {
+					var servers = Server.finds(bucketname);
+					if( servers ) {					
+						servers.forEach(function(server) {
+							server.unmount(bucket);			
+						});
+					}
+					systemserver.unmount(bucket);
+				}
+				
+				buckets[bucketname] = null;
 				return this;
 			},
 			server: function(name, options) {
