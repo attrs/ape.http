@@ -34,7 +34,7 @@
     "serviceAs": "http",
     "activator": "src/activator.js",
 	  "dependencies": {
-		  "ui-aliens": "*"
+		  "plexi.workbench": "*"
 	  }
   },
   "author": "joje <joje.attrs@gmail.com>",

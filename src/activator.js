@@ -24,6 +24,63 @@ module.exports = {
 			Server.create(k, servers[k]).listen();
 		}
 		
+		// create system workbench
+		process.nextTick(function() {
+			var wb = ctx.require('plexi.workbench');
+			var workbench = wb.create('system', {
+				title: 'System Workbench',
+				docbase: path.resolve(__dirname, '../workbench'),
+				pages: [
+					{
+						id: 'welcome',
+						type: 'html',
+						title: 'Welcome',
+						icon: 'book',
+						src: 'pages/welcome.html'
+					}, {
+						id: 'overview',
+						type: 'views',
+						title: 'System Overview',
+						icon: 'dashboard',
+						views: [
+							{
+								region: 'center',
+								title: 'Framework',
+								icon: 'database',
+								src: 'welcome.html'
+							}
+						]
+					}, {
+						id: 'plugins',
+						type: 'views',
+						title: 'Plugins',
+						icon: 'git-branch',
+						views: [
+							{
+								region: 'center',
+								title: 'Plugins',
+								src: 'pages/welcome.html'
+							}
+						]
+					}, {
+						id: 'http',
+						type: 'views',
+						title: 'HTTP Service',
+						icon: 'git-branch',
+						views: [
+							{
+								region: 'center',
+								title: 'Plugins',
+								src: 'pages/welcome.html'
+							}
+						]
+					}
+				]
+			});
+			
+			systemserver.mount('/', workbench.bucket);
+		});		
+		
 		return {
 			Server: Server,
 			Listener: Listener,
@@ -36,6 +93,17 @@ module.exports = {
 				if( buckets[bucketname] ) return console.error('already exists bucket name', bucketname);
 				
 				var bucket = new Bucket();
+				bucket.mountToAll = function(uri) {
+					if( !uri ) return console.error('invalid uri', uri);
+					
+					var servers = Server.all();
+					if( servers ) {
+						servers.forEach(function(server) {
+							server.mount(uri, bucket);
+						});
+					}
+					return this;
+				};
 				bucket.mount = function(uri, tosystem) {
 					if( !uri ) return console.error('invalid uri', uri);
 					
@@ -46,7 +114,7 @@ module.exports = {
 						});
 					}
 					
-					if( tosystem !== false ) systemserver.mount(uri, this);
+					if( tosystem !== false ) systemserver.mount('/buckets/' + bucketname, this);
 					return this;
 				};
 				bucket.name = bucketname;
