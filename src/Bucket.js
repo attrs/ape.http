@@ -8,6 +8,10 @@ function Bucket() {
 };
 
 Bucket.prototype = {
+	docbase: function(docbase) {
+		this.docbase = docbase;
+		return this;	
+	},
 	use: function(uri, fn) {
 		if( uri instanceof Bucket ) this.router.use(uri.router);
 		if( fn instanceof Bucket ) this.router.use(uri, fn.router);

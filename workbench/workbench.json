@@ -1,0 +1,49 @@
+{
+	title: 'System Workbench',
+	pages: [
+		{
+			id: 'welcome',
+			type: 'html',
+			title: 'Welcome',
+			icon: 'book',
+			src: 'pages/welcome.html'
+		}, {
+			id: 'overview',
+			type: 'views',
+			title: 'System Overview',
+			icon: 'dashboard',
+			views: [
+				{
+					region: 'center',
+					title: 'Framework',
+					icon: 'database',
+					src: 'welcome.html'
+				}
+			]
+		}, {
+			id: 'plugins',
+			type: 'views',
+			title: 'Plugins',
+			icon: 'git-branch',
+			views: [
+				{
+					region: 'center',
+					title: 'Plugins',
+					src: 'pages/welcome.html'
+				}
+			]
+		}, {
+			id: 'http',
+			type: 'views',
+			title: 'HTTP Service',
+			icon: 'git-branch',
+			views: [
+				{
+					region: 'center',
+					title: 'Plugins',
+					src: 'pages/welcome.html'
+				}
+			]
+		}
+	]
+}

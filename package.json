@@ -33,9 +33,9 @@
   "plexi": {
     "serviceAs": "http",
     "activator": "src/activator.js",
-	  "dependencies": {
-		  "plexi.workbench": "*"
-	  }
+    "dependencies": {
+      "plexi.workbench": "*"
+    }
   },
   "author": "joje <joje.attrs@gmail.com>",
   "homepage": "https://github.com/attrs/plexi.http",

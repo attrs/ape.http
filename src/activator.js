@@ -2,90 +2,44 @@ var Listener = require('./Listener.js');
 var Server = require('./Server.js');
 var Bucket = require('./Bucket.js');
 var path = require('path');
+var fs = require('fs');
 
 var buckets = {};
 
 module.exports = {
 	start: function(ctx) {
 		var config = ctx.preference;
-				
+						
 		var listeners = config.listeners || [];
 		listeners.forEach(function(options) {
 			Listener.create(options);
 		});
 		
 		var systemserver = Server.create('system', {
-			docbase: path.resolve(__dirname, '../www'),
 			port: 19000
 		}).listen();
 		
-		var servers = config.servers;		
+		systemserver.mount('/buckets.json', function(req, res, next) {
+			res.send(buckets);			
+		});
+		
+		var servers = config.servers;
 		for( var k in servers ) {
 			Server.create(k, servers[k]).listen();
 		}
 		
-		// create system workbench
-		process.nextTick(function() {
-			var wb = ctx.require('plexi.workbench');
-			var workbench = wb.create('system', {
-				title: 'System Workbench',
-				docbase: path.resolve(__dirname, '../workbench'),
-				pages: [
-					{
-						id: 'welcome',
-						type: 'html',
-						title: 'Welcome',
-						icon: 'book',
-						src: 'pages/welcome.html'
-					}, {
-						id: 'overview',
-						type: 'views',
-						title: 'System Overview',
-						icon: 'dashboard',
-						views: [
-							{
-								region: 'center',
-								title: 'Framework',
-								icon: 'database',
-								src: 'welcome.html'
-							}
-						]
-					}, {
-						id: 'plugins',
-						type: 'views',
-						title: 'Plugins',
-						icon: 'git-branch',
-						views: [
-							{
-								region: 'center',
-								title: 'Plugins',
-								src: 'pages/welcome.html'
-							}
-						]
-					}, {
-						id: 'http',
-						type: 'views',
-						title: 'HTTP Service',
-						icon: 'git-branch',
-						views: [
-							{
-								region: 'center',
-								title: 'Plugins',
-								src: 'pages/welcome.html'
-							}
-						]
-					}
-				]
-			});
-			
-			systemserver.mount('/', workbench.bucket);
-		});		
+		if( !servers ) {
+			var docbase = path.resolve(process.cwd(), 'www');
+			if( !fs.existsSync(docbase) ) fs.mkdirSync(docbase);
+			Server.create('default', {
+				docbase: docbase
+			}).listen();
+		}
 		
-		return {
+		this.exports = {
 			Server: Server,
 			Listener: Listener,
 			Bucket: Bucket,
-			systemserver: systemserver,
 			create: function(name) {
 				name = name || 'default';
 				var bucketname = this.id ? this.id + ':' + name : name;
@@ -122,6 +76,15 @@ module.exports = {
 				buckets[bucketname] = bucket;
 				return bucket;
 			},
+			mount: function(uri, bucket) {
+				var servers = Server.finds(bucket.name || 'noname');
+				if( !servers ) return console.error('[http] cannot found matched server(from ' + this.id + ')', uri, bucket.name);
+				
+				servers.forEach(function(server) {
+					server.mount(uri, bucket);						
+				});
+				return this;
+			},
 			drop: function(name) {
 				name = name || 'default';
 				var bucketname = this.id ? this.id + ':' + name : name;
@@ -138,6 +101,7 @@ module.exports = {
 				}
 				
 				buckets[bucketname] = null;
+				delete buckets[bucketname];
 				return this;
 			},
 			server: function(name, options) {
@@ -152,8 +116,18 @@ module.exports = {
 			},
 			listeners: function() {
 				return Listener.all();
+			},
+			filter: function(name, filter) {
+				return Server.filter.apply(Server, arguments);
 			}
 		};
+		
+		// create system workbench
+		process.nextTick(function() {
+			var wb = ctx.require('plexi.workbench');
+			var workbench = wb.create('system', path.resolve(__dirname, '../workbench'));			
+			systemserver.mount('/', workbench.bucket);
+		});
 	},
 	stop: function(ctx) {
 		Listener.all().forEach(function(listener) {
@@ -163,18 +137,3 @@ module.exports = {
 		console.log('[' + ctx.id + '] stopped');
 	}
 };
-
-/*
-		// in plugin
-		var http = ctx.require('plexi.http');	
-	
-		var bucket = http.create('name');
-		bucket.static('images', path.join(__dirname, 'www/images'));
-		bucket.get('server', function(req, res, next) {
-			res.send('ok.');
-		});
-		bucket.mount('/test');
-		var server = bucket.server();
-		var listener = server.listener();
-		listener.stop().start();
-*/

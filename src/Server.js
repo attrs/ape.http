@@ -11,7 +11,6 @@ var cookieparser = require('cookie-parser');
 var cookiesession = require('cookie-session');
 var morgan = require('morgan');
 var vhost = require('vhost');
-var httpProxy = require('http-proxy');
 
 var colors = require('colors');
 var fs = require('fs');
@@ -57,19 +56,58 @@ function Server(options) {
 	
 	// filter middleware
 	var filter = function(req, res, next) {
-		var uri = req.uri;
-		patterns.forEach(function(pattern) {
-			if( uri.match(pattern.regexp) ) {
-				return pattern.filter.apply(self, [req.docbase, req, res, next]);
-			}				
-		});
-		next();
+		var uri = req.path;
+		
+		// instance filter
+		for(var pattern in options.filters) {
+			var filtername = options.filters[pattern];
+			
+			// case if **/*.ext: false
+			if( filtername === false && minimatch(uri, pattern) ) return res.sendStatus(404);
+			
+			var filter = options.filter[filtername];
+			if( !filter ) {
+				console.warn('not found filter', filtername);
+				continue;
+			}
+			
+			if( minimatch(uri, pattern) ) {
+				filtered = true;
+				filter.filter(req, res, next);
+			}
+		}
+		
+		// global filter
+		var filtered = false;
+		for(var k in filters) {
+			var filter = filters[k];
+			
+			if( !filter || !Array.isArray(filter.pattern) ) continue;
+			
+			filter.pattern.forEach(function(pattern) {
+				if( !pattern || typeof pattern !== 'string' ) return console.warn('illegal filter pattern', k, pattern);
+				
+				//console.log('filter', uri, pattern, minimatch(uri, pattern));
+				if( minimatch(uri, pattern) ) {
+					filtered = true;
+					filter.filter(req, res, next);
+				}
+			});
+		}
+		
+		if( !filtered ) next();
 	};
+	
+	//console.log('minimatch', minimatch('/a.njs', '**/*.njs'));
 	
 	// set settings
 	app.set('json spaces', '\t');
 	for(var k in options.variables ) app.set(k, options.variables[k]);
 	
+	app.use(function(req, res, next) {
+		req.server = self;
+		next();
+	});
 	app.use(fns.logging(options.logging));
 	
 	var forward = options.forward;
@@ -91,9 +129,9 @@ function Server(options) {
 		});
  	} else {
 		app.use(docbase);
-		app.use(filter);
-		if( options.favicon ) app.use(favicon(options.favicon));
+		app.use(favicon(options.favicon || path.resolve(__dirname, '../www/favicon.ico')));
 		if( options.compress ) app.use(compression( (typeof options.compress === 'number' ? {threshold: options.compress} : {}) ));
+		app.use(cookieparser({ secret: 'tlzmflt' }));
 		app.use(fns.charset(options.charset || 'utf8'));
 		app.use(methodoverride());
 		app.use(cookiesession(options.session || { secret: 'tlzmflt' }));
@@ -101,6 +139,7 @@ function Server(options) {
 		app.use(bodyparser.urlencoded({ extended: true }));
 		app.use(multer());
 		app.use(csurf());
+		app.use(filter);
 	
 		// docbase
 		app.use(function(req, res, next) {
@@ -252,7 +291,6 @@ Server.prototype = {
 // static
 var servers = {};
 var filters = {};
-var patterns = [];
 
 var get = function(name) {
 	return servers[name];
@@ -288,11 +326,20 @@ var find = function(mapping) {
 	return null;
 };
 var filter = function(name, options) {
-	if( typeof name !== 'string' || !name ) return console.error('illegal pattern', name);
+	if( typeof name !== 'string' || !name ) return console.error('illegal filter name', name);
+	if( typeof options !== 'object' ) return console.error('illegal filter options(object)', options);
 	if( typeof options === 'function' ) options = {filter:options};
+	if( typeof options.filter !== 'function' ) return console.error('illegal options.filter(function)', options);
+		
 	filters[name] = options;
 	return this;
 };
+
+// bundle filter
+filter('nodejs', {
+	pattern: ['**/*.njs', '**/*.node.js', '/nodejs/*.js', '/nodejs/**/*.js', '**/*.jade', '**/*.ejs', '**/*.swig', '**/*.haml'],
+	filter: require('./filters/nodejs.js')
+});
 
 module.exports = {
 	Server: Server,
@@ -304,11 +351,3 @@ module.exports = {
 	filters: filters,
 	filter: filter
 };
-
-
-// test
-var testFilter = require('./filters/test.js');
-filter('test', {
-	pattern: ['*.test', '/test/*'],
-	filter: testFilter
-});
