@@ -28,7 +28,7 @@
     "serve-favicon": "^2.1.7",
     "uuid": "~2.0.1",
     "vhost": "^3.0.0",
-    "wrench": "~1.5.8"
+    "wrench": "^1.5.8"
   },
   "devDependencies": {
     "request": "^2.49.0"

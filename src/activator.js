@@ -3,6 +3,7 @@ var Server = require('./Server.js');
 var Bucket = require('./Bucket.js');
 var path = require('path');
 var fs = require('fs');
+var wrench = require('wrench');
 
 var buckets = {};
 
@@ -31,7 +32,13 @@ module.exports = {
 		
 		if( !servers ) {
 			var docbase = path.resolve(process.cwd(), 'www');
-			if( !fs.existsSync(docbase) ) fs.mkdirSync(docbase);
+			if( !fs.existsSync(docbase) ) {
+				fs.mkdirSync(docbase);
+				wrench.copyDirSyncRecursive(path.resolve(__dirname, '../www'), docbase, {
+					forceDelete: true,
+					preserveFiles: true
+				});
+			}
 			var defaultserver = Server.create('default', {
 				docbase: docbase,
 				mapping: '*'
