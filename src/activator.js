@@ -18,6 +18,7 @@ module.exports = {
 		var systemserver = Server.create('system', {
 			port: 19000
 		}).listen();
+		systemserver.mount('/libs', path.resolve(__dirname, '../bower_components'));
 		
 		systemserver.mount('/buckets.json', function(req, res, next) {
 			res.send(buckets);			
@@ -31,9 +32,11 @@ module.exports = {
 		if( !servers ) {
 			var docbase = path.resolve(process.cwd(), 'www');
 			if( !fs.existsSync(docbase) ) fs.mkdirSync(docbase);
-			Server.create('default', {
-				docbase: docbase
+			var defaultserver = Server.create('default', {
+				docbase: docbase,
+				mapping: '*'
 			}).listen();
+			defaultserver.mount('/libs', path.resolve(__dirname, '../bower_components'));
 		}
 		
 		this.exports = {
@@ -42,47 +45,30 @@ module.exports = {
 			Bucket: Bucket,
 			create: function(name) {
 				name = name || 'default';
-				var bucketname = this.id ? this.id + ':' + name : name;
+				var id = this.id ? this.id + ':' + name : name;
 				
-				if( buckets[bucketname] ) return console.error('already exists bucket name', bucketname);
+				if( buckets[id] ) return console.error('already exists bucket name', name);
 				
-				var bucket = new Bucket();
+				var bucket = new Bucket(id);
 				bucket.mountToAll = function(uri) {
-					if( !uri ) return console.error('invalid uri', uri);
-					
-					var servers = Server.all();
-					if( servers ) {
-						servers.forEach(function(server) {
-							server.mount(uri, bucket);
-						});
-					}
+					Server.mountToAll(uri, this);
 					return this;
 				};
 				bucket.mount = function(uri, tosystem) {
-					if( !uri ) return console.error('invalid uri', uri);
-					
-					var servers = Server.finds(bucketname);
-					if( servers ) {
-						servers.forEach(function(server) {
-							server.mount(uri, bucket);						
-						});
-					}
-					
-					if( tosystem !== false ) systemserver.mount('/buckets/' + bucketname, this);
+					Server.mount(uri);
+					systemserver.mount(id, '/buckets/' + id, this);
 					return this;
 				};
-				bucket.name = bucketname;
-				
-				buckets[bucketname] = bucket;
+				buckets[id] = bucket;
 				return bucket;
 			},
 			mount: function(uri, bucket) {
-				var servers = Server.finds(bucket.name || 'noname');
-				if( !servers ) return console.error('[http] cannot found matched server(from ' + this.id + ')', uri, bucket.name);
-				
-				servers.forEach(function(server) {
-					server.mount(uri, bucket);						
-				});
+				var bucketname = bucket.id || this.id.toString();
+				Server.mount(bucketname, uri, bucket);
+				return this;
+			},
+			mountToAll: function(uri, bucket) {
+				Server.mountToAll(uri, bucket);
 				return this;
 			},
 			drop: function(name) {
@@ -124,9 +110,9 @@ module.exports = {
 		
 		// create system workbench
 		process.nextTick(function() {
-			var wb = ctx.require('plexi.workbench');
-			var workbench = wb.create('system', path.resolve(__dirname, '../workbench'));			
-			systemserver.mount('/', workbench.bucket);
+			var Workbench = ctx.require('plexi.workbench');
+			var workbench = Workbench.create('system', path.resolve(__dirname, '../workbench'));			
+			systemserver.mount('/', workbench.router);
 		});
 	},
 	stop: function(ctx) {

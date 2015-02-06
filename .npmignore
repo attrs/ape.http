@@ -2,6 +2,7 @@
 .git*
 .idea
 .project
+.log
 Makefile
 docs/
 examples/
@@ -9,7 +10,7 @@ inbrowser/
 support/
 test/
 build/
-plexi_modules/
-workspace/
 logs/
+
+.plexi/
 bower_components/

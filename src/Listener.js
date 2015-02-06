@@ -1,7 +1,9 @@
 var http = require('http');
-var express = require('express');
 var fs = require('fs');
 var path = require('path');
+var express = require('express');
+var vhost = require('vhost');
+var util = require('util');
 
 // class Bucket
 function Listener(options) {
@@ -10,65 +12,60 @@ function Listener(options) {
 	this.options = options;
 	this.port = options.port;
 	this.servers = [];
-	this.app = express();
 };
 
 Listener.prototype = {
 	join: function(server) {
-		if( ~this.servers.indexOf(server) ) return console.error('already joined', server);
-				
-		// host
-		var app = this.app;
-		var servers = this.servers;
-		var router = function(req, res, next) {
-			server.router(req, res, next);
-		};
-		
-		server.router.__router = router;		
-		servers.push(server);
-		app.use(router);
-		
+		if( ~this.servers.indexOf(server) ) return util.error(this, 'already joined', server);
+		this.servers.push(server);
 		return this;
 	},
 	drop: function(server) {
-		if( !~this.servers.indexOf(server) ) return console.error('not a member', server);
-		var app = this.app;
-		var router = server.router.__router;
-		
-		var stack = app._router.stack;
-		stack.forEach(function(s) {
-			if( s.handle === router ) stack.splice(stack.indexOf(s), 1);
-		});
-
-		var servers = this.servers;
-		for(var index; ~(index = servers.indexOf(server));) {
-			servers.splice(servers.indexOf(server), 1);
-		}
+		if( !~this.servers.indexOf(server) ) return util.error(this, 'not a member', server);
+		this.servers.splice(servers.indexOf(server), 1);
 		return this;
 	},
 	isListen: function() {
 		return this.httpd ? true : false;	
 	},
 	listen: function(callback) {
-		if( this.httpd ) return console.error('already listen', this.port);
+		if( this.httpd ) return util.error(this, 'already listen', this.port);
 		
-		// default callback
-		callback = callback || function(err, port) {
-			if( err && err.code == 'EADDRINUSE' ) return console.error('Port in use...', port);
-			else if( err ) return console.error('Listen failure', port, err);			
-			console.log('HTTP listening on port ' + port);
-		};
-		
-		var app = this.app;
+		var self = this;
 		var options = this.options;
 		var port = options.port;
 		var ssl = ssl || options.ssl;
 		
+		// default callback
+		callback = callback || function(err, port) {
+			if( err && err.code == 'EADDRINUSE' ) return util.error(self, 'Port in use...', port);
+			else if( err ) return util.error(self, 'Listen failure', port, err);			
+			util.debug(self, 'HTTP listening on port ' + port);
+		};
+		
 		if( typeof port !== 'number' ) return callback('invalid port:' + port) ? null : null;
 		
+		var servers = this.servers;
+		var router = function(req, res) {
+			var index = 0;
+			var dispatch = function() {
+				var server = servers[index++];
+				if( server && server.router ) {
+					server.router(req, res, function(err) {
+						if( err ) util.error(server, err);
+						dispatch();
+					});
+				} else {
+					res.statusCode = 404;
+					res.end('Not Found');
+				}
+			};
+			dispatch();
+		};
+		
 		var httpd;
-		if( ssl ) httpd = https.createServer(ssl, app);
-		else httpd = http.createServer(app);
+		if( ssl ) httpd = https.createServer(ssl, router);
+		else httpd = http.createServer(router);
 		
 		httpd.on('error', function (e) {
 			callback(e, port);
@@ -83,14 +80,14 @@ Listener.prototype = {
 		return this;
 	},
 	close: function(callback) {
+		var self = this;
 		callback = callback || function(err, port) {
-			if( err ) return console.error('Listener close failure', port, err);
-			console.log('HTTP closed successfully, port' + port);			
+			if( err ) return util.error(self, 'Listener close failure', port, err);
+			util.debug(self, 'HTTP closed successfully, port' + port);			
 		};
 		
 		if( this.httpd ) {
-			var port = this.port;			
-			var self = this;
+			var port = this.port;
 			this.httpd.close(function() {
 				callback(null, port);
 				
@@ -101,6 +98,9 @@ Listener.prototype = {
 			callback('listener already closed', this.options.port);
 		}
 		return this;
+	},
+	toString: function() {
+		return 'listener:' + this.port;
 	}
 };
 
@@ -108,7 +108,7 @@ Listener.prototype = {
 var listeners = {};
 var create = function(options) {
 	if( typeof options === 'number' ) options = {port:options};
-	if( typeof options !== 'object' ) return console.error('illegal listener options', options);
+	if( typeof options !== 'object' ) return util.error('Listener', 'illegal listener options', options);
 	
 	return listeners[options.port + ''] = new Listener(options);
 };

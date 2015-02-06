@@ -1,80 +1,97 @@
 var express = require('express');
 var fs = require('fs');
 var path = require('path');
+var minimatch = require('minimatch');
+var util = require('./util.js');
 
 // class Bucket
-function Bucket() {	
-	this.router = express.Router();
-};
-
-Bucket.prototype = {
-	docbase: function(docbase) {
-		this.docbase = docbase;
-		return this;	
-	},
-	use: function(uri, fn) {
-		if( uri instanceof Bucket ) this.router.use(uri.router);
-		if( fn instanceof Bucket ) this.router.use(uri, fn.router);
+function Bucket(id) {
+	var docbase, filters = {};
+	
+	var router = express.Router();
+	router.id = id;
+	router.toString = function() {
+		return 'router:' + (id || 'noname');
+	};
+	
+	router.use(function(req, res, next) {
+		if( req.server && req.server.debug ) util.debug([req.server, router], req.url);
+		var origindocbase = req.docbase;
+		var currentdocbase = docbase;		
+		var filterchain = [];
 		
-		if( typeof(uri) === 'function' ) return this.router.use(uri);
-		this.router.use(uri, fn);
+		for(var pattern in filters) {
+			var filter = filters[pattern];
+		
+			if( minimatch(req.url, pattern) ) {
+				if( filter === false ) filterchain.push(false);
+				else if( typeof filter === 'function' ) filterchain.push(filter);
+				else if( Array.isArray(filter) ) filterchain = filterchain.concat(filterchain, filter);
+			}
+		}
+		
+		req.docbase = currentdocbase;
+		
+		var index = 0;
+		var dispatch = function() {
+			var fn = filterchain[index++];
+			if( fn ) {
+				fn(req, res, function(err) {
+					if( err ) return next(err);
+					dispatch();
+				});
+			} else {
+				next();
+				if( docbase ) express.static(docbase)(req, res, function() {});
+			}
+		};
+		dispatch();
+		
+		req.docbase = origindocbase;
+	});
+	
+	router.docbase = function(doc) {
+		docbase = doc;
 		return this;
-	},
-	all: function(uri, fn) {
-		this.router.all(uri, fn);
+	};
+	
+	router.filter = function(filter) {
+		docbase = doc;
 		return this;
-	},
-	get: function(uri, fn) {
-		this.router.get(uri, fn);
+	};
+	
+	router.static = function(uri, path) {
+		this.use(uri, express.static(path));
 		return this;
-	},
-	post: function(uri, fn) {
-		this.router.post(uri, fn);
-		return this;
-	},
-	put: function(uri, fn) {
-		this.router.put(uri, fn);
-		return this;
-	},
-	del: function(uri, fn) {
-		this.router.delete(uri, fn);
-		return this;
-	},
-	delete: function(uri, fn) {
-		this.router.delete(uri, fn);
-		return this;
-	},
-	options: function(uri, fn) {
-		this.router.options(uri, fn);
-		return this;
-	},
-	static: function(uri, path) {
-		this.router.use(uri, express.static(path));
-		return this;
-	},
-	file: function(uri, path) {
+	};
+	
+	router.file = function(uri, path) {
 		var fn = (function(path) {
 			return function(req, res, next) {
 				if( fs.existsSync(path) ) return res.sendfile(path);
 				next();
 			}
 		})(path);
-		this.router.use(uri, fn);
+		this.use(uri, fn);
 		return this;
-	},
-	remove: function(method, path) {
+	};
+	
+	router.remove = function(method, path) {
 		if( method === 'all' ) method = '_all';
-		this.router.stack.forEach(function(stack) {
+		this.stack.forEach(function(stack) {
 			if( stack.path === path && stack.methods[method] ) {
-				this.router.stack.splice(this.router.stack.indexOf(stack), 1);
+				this.stack.splice(this.stack.indexOf(stack), 1);
 			}
 		});
 		return this;
-	},
-	clear: function() {
-		this.router.stack = [];
+	};
+	
+	router.clear = function() {
+		this.stack = [];
 		return this;
-	}
+	};
+	
+	return router;
 };
 
 module.exports = Bucket;
