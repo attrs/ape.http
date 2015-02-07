@@ -54,6 +54,8 @@ function docbase(config) {
 			}
 		}
 		
+		docbase = docbase ? path.resolve(process.cwd(), docbase) : null;
+		
 		// confirm filters
 		var filterchain = [];
 		for(var pattern in config.filters) {
@@ -71,7 +73,7 @@ function docbase(config) {
 		var body = config.router;
 		var staticFirst = config.staticFirst;
 		
-		req.docbase = docbase ? path.resolve(process.cwd(), docbase) : null;
+		req.docbase = docbase;
 		
 		var onext = next;
 		next = function(err) {
