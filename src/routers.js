@@ -71,7 +71,7 @@ function docbase(config) {
 		var body = config.router;
 		var staticFirst = config.staticFirst;
 		
-		req.docbase = docbase;
+		req.docbase = docbase ? path.resolve(process.cwd(), docbase) : null;
 		
 		var onext = next;
 		next = function(err) {
