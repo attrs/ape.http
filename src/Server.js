@@ -47,14 +47,9 @@ Server.prototype = {
 
 		// set settings
 		app.set('json spaces', '\t');
+		app.set('server', this);
 		for(var k in options.variables ) app.set(k, options.variables[k]);
 
-		app.use(function(req, res, next) {
-			var originserver = req.server;
-			req.server = self;
-			next();
-			req.server = originserver;
-		});
 		app.use(accesslog(options.logging));
 
 		if( options.compression !== false ) {
@@ -70,9 +65,12 @@ Server.prototype = {
 		app.use(bodyparser.json());
 		app.use(bodyparser.urlencoded({ extended: true }));
 		app.use(multer());
-		app.use(csurf());
+		//app.use(csurf());
 
 		app.use(docbase({
+			get label() {
+				return self;
+			},
 			get debug() {
 				return self.debug;
 			},
@@ -80,13 +78,16 @@ Server.prototype = {
 				return options.docbase;
 			},
 			get filters() {
-				return self.filters();
+				return util.mix(filtermapping, self.filters());
 			}
 		}));
 		app.use(this.body);
 
 		for(var file in options.mount) {
 			app.use(options.mount[file], docbase({
+				get label() {
+					return this.toString() + ':mount';
+				}, 
 				get debug() {
 					return self.debug;
 				},
@@ -94,7 +95,7 @@ Server.prototype = {
 					return file;
 				},
 				get filters() {
-					return self.filters();
+					return util.mix(filtermapping, self.filters());
 				}
 			}));
 		}

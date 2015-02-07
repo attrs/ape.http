@@ -55,7 +55,10 @@ Listener.prototype = {
 				var server = servers[index++];
 				if( server && server.router ) {
 					server.router(req, res, function(err) {
-						if( err ) util.error(server, err);
+						if( err ) {
+							res.send(err);
+							return util.error(server, err);
+						}
 						dispatch();
 					});
 				} else {

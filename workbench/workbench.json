@@ -17,7 +17,7 @@
 					region: 'center',
 					title: 'Framework',
 					icon: 'database',
-					src: 'welcome.html'
+					src: 'pages/welcome.html'
 				}
 			]
 		}, {

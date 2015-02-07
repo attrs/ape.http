@@ -70,10 +70,46 @@ function getset(o, name, gettersetter, enumerable) {
 	});
 }
 
+function mix() {
+	var result = {};
+	[].slice.call(arguments).forEach(function(arg) {
+		if( !arg ) return;
+		if( typeof arg !== 'object' ) return warn('util', 'mix element must be an object', arg);
+		for(var k in arg) {
+			if( arg.hasOwnProperty(k) ) result[k] = arg[k];
+		}
+	});	
+	return result;
+}
+
+function createErrorType(name) {
+	function CustomError(message, cause) {
+		if( message instanceof Error ) {
+			cause = message;
+			message = message.message;
+		}
+		
+		Error.call(this, message);
+		this.name = name;
+		this.message = message;
+		this.arguments = [].slice.call(arguments);
+		
+		Error.captureStackTrace(this, arguments.callee);
+	
+		if( cause instanceof Error ) this.cause = cause;
+	}
+
+	CustomError.prototype = Object.create(Error.prototype);
+	CustomError.prototype.constructor = CustomError;
+	return CustomError;
+}
+
 module.exports = {
 	error: error,
 	warn: warn,
 	debug: debug,
 	readonly: readonly,
-	getset: getset
+	getset: getset,
+	mix: mix,
+	createErrorType: createErrorType
 };
