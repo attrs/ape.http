@@ -38,7 +38,7 @@ function warn(category, msg) {
 	console.warn.apply(console.warn, arg);
 }
 
-function debug(category, msg) {	
+function debug(category, msg) {
 	var arg = [].slice.call(arguments);
 	category = category || 'unknown';
 	category = Array.isArray(category) ? category : [category];
@@ -50,8 +50,30 @@ function debug(category, msg) {
 	console.log.apply(console.log, arg);
 }
 
+function readonly(o, name, value, enumerable) {
+	var cfg = {
+		enumerable: enumerable === false ? false : true,
+		configurable: false,
+		writable: false
+	};
+	if( value !== undefined && value !== null ) cfg.value = value;
+	
+	Object.defineProperty(o, name, cfg);
+}
+
+function getset(o, name, gettersetter, enumerable) {
+	Object.defineProperty(o, name, {
+		get: gettersetter.get,
+		set: gettersetter.set,
+		enumerable: enumerable === true ? false : true,
+		configurable: false			
+	});
+}
+
 module.exports = {
 	error: error,
 	warn: warn,
-	debug: debug
+	debug: debug,
+	readonly: readonly,
+	getset: getset
 };

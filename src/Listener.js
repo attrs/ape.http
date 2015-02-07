@@ -3,11 +3,11 @@ var fs = require('fs');
 var path = require('path');
 var express = require('express');
 var vhost = require('vhost');
-var util = require('util');
+var util = require('./util.js');
 
 // class Bucket
 function Listener(options) {
-	if( typeof options !== 'object' || typeof options.port !== 'number' || options.port <= 0 ) throw new Error('illegal options:' + options);
+	if( typeof options !== 'object' || typeof options.port !== 'number' || options.port <= 0 || options.port > 65535 || isNaN(options.port) ) throw new Error('illegal options:' + options);
 
 	this.options = options;
 	this.port = options.port;
@@ -27,6 +27,9 @@ Listener.prototype = {
 	},
 	isListen: function() {
 		return this.httpd ? true : false;	
+	},
+	has: function(server) {
+		return ~this.servers.indexOf(server) ? true : false;
 	},
 	listen: function(callback) {
 		if( this.httpd ) return util.error(this, 'already listen', this.port);
@@ -109,14 +112,13 @@ var listeners = {};
 var create = function(options) {
 	if( typeof options === 'number' ) options = {port:options};
 	if( typeof options !== 'object' ) return util.error('Listener', 'illegal listener options', options);
-	
-	return listeners[options.port + ''] = new Listener(options);
+	if( typeof options.port !== 'number' || options.port <= 0 || options.port > 65535 || isNaN(options.port) ) return util.error('Listener', 'illegal port number(port>0)', port);
+
+	return listeners[options.port.toString()] = new Listener(options);
 };
 
 var get = function(port) {
-	var listener = listeners[((typeof port === 'number' && port >= 0) ? port : 9000) + ''];
-	if( !listener ) listener = create({port: ((typeof port === 'number' && port >= 0) ? port : 9000) });
-	return listener;
+	return listeners[port.toString()];
 };
 
 var all = function() {

@@ -22,79 +22,12 @@ var minimatch = require("minimatch");
 var routers = require('./routers.js');
 var Listener = require('./Listener.js');
 var util = require('./util.js');
+var accesslog = routers.accesslog;
+var errorlog = routers.errorlog;
+var docbase = routers.docbase;
+var forward = routers.forward;
+var cors = routers.cors;
 
-
-
-function docbase(config) {
-	config = config || {};
-	
-	return function(req, res, next) {	
-		var origindocbase = req.docbase;
-		var docbase;
-				
-		if( typeof config.docbase === 'object' ) {
-			docbase = config.docbase[req.hostname] || config.docbase['*'];
-		} else if( typeof config.docbase === 'string' ) {
-			docbase = config.docbase;
-			if( req.vhost && ~base.indexOf(':') ) {
-				docbase = docbase.split(':1').join(req.vhost[0])
-				.split(':2').join(req.vhost[1])
-				.split(':3').join(req.vhost[2])
-				.split(':4').join(req.vhost[3])
-				.split(':5').join(req.vhost[4]);
-			}
-		}
-		
-		var filterchain = [];
-		for(var pattern in config.filters) {
-			var filter = filters[pattern];
-		
-			if( minimatch(req.url, pattern) ) {
-				if( filter === false ) filterchain.push(false);
-				else if( typeof filter === 'function' ) filterchain.push(filter);
-				else if( Array.isArray(filter) ) filterchain = filterchain.concat(filterchain, filter);
-			}
-		}
-		
-		if( config.debug ) util.debug(req.server, 'docbase(' + docbase + ')', req.url, filterchain);
-		
-		req.docbase = docbase;
-		
-		var index = 0;
-		var dispatch = function() {
-			var fn = filterchain[index++];
-			if( fn ) {
-				fn(req, res, function(err) {
-					if( err ) return next(err);
-					dispatch();
-				});
-			} else {
-				if( docbase ) express.static(docbase)(req, res, next);
-				else next();
-			}
-		};
-		dispatch();
-		
-		req.docbase = origindocbase;
-	};
-}
-
-function cors(options) {
-	options = options || {};
-	return function(req, res, next){
-		if ('OPTIONS' == req.method) {
-			var config = options[req.hostname];
-			if( config ) {
-				res.header('Access-Control-Allow-Origin', req.hostname);
-				res.header('Access-Control-Allow-Methods', config.methods ? config.methods.join(',') : '*');
-				res.header('Access-Control-Allow-Headers', config.headers ? config.headers.join(',') : '*');
-				res.send();
-			}
-		}
-		
-		next();
-	};
-};
 
 // class Server
 function Server(options) {
@@ -122,62 +55,48 @@ Server.prototype = {
 			next();
 			req.server = originserver;
 		});
-		app.use(routers.accesslog(options.logging));
+		app.use(accesslog(options.logging));
 
 		if( options.compression !== false ) {
 			app.use(compression( (typeof options.compression === 'number' ? {threshold: options.compression} : options.compression || {}) ));
 		}
+		
+		app.use(favicon(options.favicon || path.resolve(__dirname, '../favicon/favicon.ico')));
+		app.use(forward(options.forward));
+		app.use(cors(options.cors));
+		app.use(cookieparser({ secret: 'tlzmflt' }));
+		app.use(methodoverride());
+		app.use(cookiesession(options.session || { secret: 'tlzmflt' }));
+		app.use(bodyparser.json());
+		app.use(bodyparser.urlencoded({ extended: true }));
+		app.use(multer());
+		app.use(csurf());
 
-		var forward = options.forward;
-		if( forward ) {
-			var forwardoptions = (typeof forward === 'object' ? forward : {forward:forward});
-			app.use(function(req, res, next) {
-				var request = http.request({
-					url: Url.parse(forwardoptions.forward),
-					headers: req.headers,
-					method: req.method
-				}, function(response) {
-					response.pipe(res, {end:true});
-				});
-				req.pipe(request, {end:true});
-			});
-	 	} else {
-			app.use(favicon(options.favicon || path.resolve(__dirname, '../favicon/favicon.ico')));
-			app.use(cors(options.cors));
-			app.use(cookieparser({ secret: 'tlzmflt' }));
-			app.use(methodoverride());
-			app.use(cookiesession(options.session || { secret: 'tlzmflt' }));
-			app.use(bodyparser.json());
-			app.use(bodyparser.urlencoded({ extended: true }));
-			app.use(multer());
-			app.use(csurf());
+		app.use(docbase({
+			get debug() {
+				return self.debug;
+			},
+			get docbase() {
+				return options.docbase;
+			},
+			get filters() {
+				return self.filters();
+			}
+		}));
+		app.use(this.body);
 
-			app.use(docbase({
+		for(var file in options.mount) {
+			app.use(options.mount[file], docbase({
 				get debug() {
 					return self.debug;
 				},
 				get docbase() {
-					return options.docbase;
+					return file;
 				},
 				get filters() {
 					return self.filters();
 				}
 			}));
-			app.use(this.body);
-
-			for(var file in options.mount) {
-				app.use(options.mount[file], docbase({
-					get debug() {
-						return self.debug;
-					},
-					get docbase() {
-						return file;
-					},
-					get filters() {
-						return self.filters();
-					}
-				}));
-			}
 		}
 
 		// status page
@@ -313,26 +232,35 @@ Server.prototype = {
 		});
 		return this;
 	},
-	listen: function(callback) {
-		var listener = this.listener = Listener.get(this.options.port);
-		listener.join(this);
-		if( !listener.isListen() ) listener.listen(callback);
+	listen: function(port) {
+		port = port || this.options.port || 9000;
+				
+		var listener = Listener.get(port) || Listener.create(port);
+		var listeners = this.listeners = this.listeners || [];
+
+		if( !listener.has(this) ) listener.join(this);
+		if( !~listeners.indexOf(listener) ) listeners.push(listener);		
+		if( !listener.isListen() ) listener.listen();
+		
+		util.readonly(this, 'listeners');
+		
 		return this;
 	},
-	close: function() {
-		if( this.listener ) this.listener.drop(this);
+	close: function(port) {
+		var self = this;
+		(this.listeners || []).forEach(function(listener) {
+			listener.drop(self);
+		});
 		return this;
 	},
 	toString: function() {
-		return 'http:' + (this.name || '(noname)');
+		return 'server:' + (this.name || '(unnamed)');
 	}
 };
 
 
 // static
 var servers = {};
-var filters = {};
-
 var get = function(name) {
 	return servers[name];
 };
@@ -366,21 +294,6 @@ var find = function(mapping) {
 	}
 	return null;
 };
-var filter = function(name, options) {
-	if( typeof name !== 'string' || !name ) return util.error('Server', 'illegal filter name', name);
-	
-	if( options === false ) {
-		delete filters[name];
-		return this;
-	}
-	
-	if( typeof options !== 'object' ) return util.error('Server', 'illegal filter options(object)', options);
-	if( typeof options === 'function' ) options = {filter:options};
-	if( typeof options.filter !== 'function' ) return util.error('Server', 'illegal options.filter(function)', options);
-		
-	filters[name] = options;
-	return this;
-};
 var mount = function(name, uri, router) {
 	if( arguments.length === 2 ) {
 		uri = name;
@@ -413,6 +326,36 @@ var mountToAll = function(uri, router) {
 	return this;
 };
 
+// global filter
+var filtermapping = {}, filters = {};
+var filter = function(name, options) {
+	if( !name || typeof name !== 'string' ) return util.error('Server', 'illegal filter name', name);
+	if( filters[name] ) return util.error('Server', 'illegal ');
+		
+	if( options === false ) {
+		delete filtermap[name];
+	} else {
+		if( typeof options !== 'object' ) return util.error('Server', 'illegal filter options(object)', options);
+		if( typeof options === 'function' ) options = {filter:options};
+		if( typeof options.filter !== 'function' ) return util.error('Server', 'illegal options.filter(function)', options);
+		
+		filters[name] = options;
+	}
+	
+	filtermapping = {};
+	for( var k in filters ) {
+		var filter = filters[k];
+		( filter.pattern || []).forEach(function(pattern) {
+			if( typeof pattern !== 'string' ) return warn('Server', 'invalid filter pattern', k, pattern);
+			
+			if( !filtermapping[pattern] ) filtermapping[pattern] = [];
+			filtermapping[pattern].push(filter.filter);
+		});
+	}
+	
+	return this;
+};
+
 // bundle filter
 filter('nodejs', {
 	pattern: ['**/*.njs', '**/*.node.js', '/nodejs/*.js', '/nodejs/**/*.js', '**/*.jade', '**/*.ejs', '**/*.swig', '**/*.haml'],
@@ -420,7 +363,6 @@ filter('nodejs', {
 });
 
 module.exports = {
-	Server: Server,
 	all: all,
 	get: get,
 	create: create,
@@ -428,6 +370,11 @@ module.exports = {
 	find: find,
 	mount: mount,
 	mountToAll: mountToAll,
-	filters: filters,
+	get filters() {
+		return filters;
+	},
+	get filtermapping() {
+		return filtermapping;
+	},
 	filter: filter
 };

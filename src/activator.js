@@ -4,6 +4,7 @@ var Bucket = require('./Bucket.js');
 var path = require('path');
 var fs = require('fs');
 var wrench = require('wrench');
+var util = require('./util.js');
 
 var buckets = {};
 
@@ -16,10 +17,10 @@ module.exports = {
 			Listener.create(options);
 		});
 		
+		// create system server, http://localhost:19000
 		var systemserver = Server.create('system', {
 			port: 19000
-		}).listen();
-		systemserver.mount('/libs', path.resolve(__dirname, '../bower_components'));
+		}).mount('/libs', path.resolve(__dirname, '../bower_components')).listen();
 		
 		systemserver.mount('/buckets.json', function(req, res, next) {
 			res.send(buckets);			
@@ -30,6 +31,7 @@ module.exports = {
 			Server.create(k, servers[k]).listen();
 		}
 		
+		// if server config is null, create default server & copy initial files
 		if( !servers ) {
 			var docbase = path.resolve(process.cwd(), 'www');
 			if( !fs.existsSync(docbase) ) {
@@ -42,8 +44,7 @@ module.exports = {
 			var defaultserver = Server.create('default', {
 				docbase: docbase,
 				mapping: '*'
-			}).listen();
-			defaultserver.mount('/libs', path.resolve(__dirname, '../bower_components'));
+			}).mount('/libs', path.resolve(__dirname, '../bower_components')).listen();
 		}
 		
 		this.exports = {
@@ -54,7 +55,7 @@ module.exports = {
 				name = name || 'default';
 				var id = this.id ? this.id + ':' + name : name;
 				
-				if( buckets[id] ) return console.error('already exists bucket name', name);
+				if( buckets[id] ) return util.error('plexi.http', 'already exists bucket name', name);
 				
 				var bucket = new Bucket(id);
 				bucket.mountToAll = function(uri) {
