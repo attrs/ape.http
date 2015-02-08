@@ -1,10 +1,8 @@
 var express = require('express');
 var multer = require('multer');
-var bodyparser = require('body-parser');
 var favicon = require('serve-favicon');
 var methodoverride = require('method-override');
 var csurf = require('csurf');
-var compression = require('compression');
 var cookieparser = require('cookie-parser');
 var cookiesession = require('cookie-session');
 var morgan = require('morgan');
@@ -27,6 +25,9 @@ var errorlog = routers.errorlog;
 var docbase = routers.docbase;
 var forward = routers.forward;
 var cors = routers.cors;
+var forwarded = routers.forwarded;
+var compress = routers.compress;
+var lazyparse = routers.lazyparse;
 
 
 // class Server
@@ -44,33 +45,30 @@ Server.prototype = {
 		var options = this.options;
 		var app = express();
 		var self = this;
+		
+		this.filters = options.filters;
 
 		// set settings
+		app.debug = this.debug;
+		app.server = this;
 		app.set('json spaces', '\t');
 		app.set('server', this);
 		for(var k in options.variables ) app.set(k, options.variables[k]);
 
 		app.use(accesslog(options.logging));
-
-		if( options.compression !== false ) {
-			app.use(compression( (typeof options.compression === 'number' ? {threshold: options.compression} : options.compression || {}) ));
-		}
-		
-		app.use(favicon(options.favicon || path.resolve(__dirname, '../favicon/favicon.ico')));
+		app.use(compress(options.compress));
+		app.use(forwarded());
 		app.use(forward(options.forward));
-		app.use(cors(options.cors));
+		app.use(favicon(options.favicon || path.resolve(__dirname, '../favicon/favicon.ico')));
+		app.use(cors(options.cors));		
 		app.use(cookieparser({ secret: 'tlzmflt' }));
 		app.use(methodoverride());
 		app.use(cookiesession(options.session || { secret: 'tlzmflt' }));
-		app.use(bodyparser.json());
-		app.use(bodyparser.urlencoded({ extended: true }));
-		app.use(multer());
-		//app.use(csurf());
+		app.use(lazyparse());
 
 		app.use(docbase({
-			get label() {
-				return self;
-			},
+			label: this,
+			filtermap: filters,
 			get debug() {
 				return self.debug;
 			},
@@ -78,15 +76,16 @@ Server.prototype = {
 				return options.docbase;
 			},
 			get filters() {
-				return util.mix(filtermapping, self.filters());
+				return util.mix(filtermapping, self.filters);
 			}
 		}));
 		app.use(this.body);
 
 		for(var file in options.mount) {
 			app.use(options.mount[file], docbase({
+				filtermap: filters,
 				get label() {
-					return this.toString() + ':mount';
+					return this.toString() + ':mounted';
 				}, 
 				get debug() {
 					return self.debug;
@@ -95,7 +94,7 @@ Server.prototype = {
 					return file;
 				},
 				get filters() {
-					return util.mix(filtermapping, self.filters());
+					return util.mix(filtermapping, self.filters);
 				}
 			}));
 		}
@@ -172,24 +171,20 @@ Server.prototype = {
 	},
 	
 	// handle options
-	filters: function(filters) {
-		if( !arguments.length ) return this.options.filters;
-		if( typeof filters !== 'object' ) return util.warn('invalid filters', filters);
+	get filters() {
+		return this._filters = this._filters || {};
+	},
+	set filters(filters) {
+		if( filters && typeof filters !== 'object' ) return util.error('illegal filters', filters);
 		
-		this.options.filters = {};
+		this._filters = {};
 		for(var k in filters) this.filter(k, filters[k]);
-		
-		return this;
 	},
 	filter: function(pattern, fn) {
-		if( arguments.length === 1 ) return this.options.filters && this.options.filters[pattern];
-		
+		if( arguments.length === 1 ) return this.filters[pattern];
 		if( typeof pattern !== 'string' ) return util.warn('illegal filter pattern', pattern);
-		if( typeof fn !== 'function' ) return util.warn('illegal filter fn', fn);
-		
-		this.options.filters = this.options.filters || {};
-		this.options.filters[pattern] = fn;
-		
+		if( typeof fn !== 'string' && typeof fn !== 'function' ) return util.warn('illegal filter fn', pattern, fn);
+		this.filters[pattern] = fn;
 		return this;
 	},
 	mappings: function() {
@@ -331,6 +326,7 @@ var mountToAll = function(uri, router) {
 var filtermapping = {}, filters = {};
 var filter = function(name, options) {
 	if( !name || typeof name !== 'string' ) return util.error('Server', 'illegal filter name', name);
+	if( arguments.length === 1 ) return filters[name];
 	if( filters[name] ) return util.error('Server', 'illegal ');
 		
 	if( options === false ) {

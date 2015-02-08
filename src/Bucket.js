@@ -7,45 +7,30 @@ var routers = require('./routers.js');
 
 // class Bucket
 function Bucket(id) {
-	var docbase, filters = {}, debug = true, staticFirst;
-	
-	var router = function(req, res, next) {
-		util.debug([req.app.get('server'), router], 'docbase(' + docbase + ')', req.url);
-		
-		docbaserouter(req, res, next);
-		
-		/*if( staticFirst ) {
-			docbaserouter(req, res, function(err) {
-				if( err ) return next(err);
-				body(req, res, next);
-			});
-		} else {
-			body(req, res, function(err) {
-				if( err ) return next(err);
-				docbaserouter(req, res, next);
-			});
-		}*/
-	};
+	var docbase, filters = {}, debug = true, staticFirst, indexpage, Server = require('./Server.js');
 	
 	var body = express.Router();
-	var docbaserouter = routers.docbase({
-		label: router,
-		get debug() {
-			return debug;
-		},
-		get docbase() {
-			return docbase;
-		},
-		get router() {
-			return body;
-		},
-		get staticFirst() {
-			return staticFirst;
-		},
-		get filters() {
-			return util.mix(require('./Server.js').filtermapping, filters);
-		}
-	});
+	var router = function(req, res, next) {
+		util.debug([req.app.get('server'), router], 'docbase(' + docbase + ')', req.path);
+		
+		var obucket = req.bucket;
+		req.bucket = router;
+		
+		routers.docbase({
+			label: router,
+			debug: debug,
+			docbase: docbase,
+			router: body,
+			indexpage: indexpage,
+			staticFirst: staticFirst,
+			filtermap: Server.filters,
+			filters: util.mix(Server.filtermapping, filters)
+		})(req, res, function(err) {
+			req.bucket = obucket;
+			if( err ) return next(err);
+			next();
+		});
+	};
 	
 	router.id = id;
 	router.toString = function() {
@@ -59,21 +44,28 @@ function Bucket(id) {
 		docbase = doc;
 		return this;
 	};
-	
+	router.index = function(index) {
+		indexpage = index;
+		return this;
+	};
 	router.filter = function(pattern, fn) {
-		if( arguments.length === 1 ) return this.options.filters && this.options.filters[pattern];
+		if( arguments.length === 1 ) return filters[pattern];
 		
 		if( typeof pattern !== 'string' ) return util.warn('illegal filter pattern', pattern);
-		if( typeof fn !== 'function' ) return util.warn('illegal filter fn', fn);
+		if( typeof fn !== 'string' && typeof fn !== 'function' ) return util.warn('illegal filter fn', pattern, fn);
 		
-		this.options.filters = this.options.filters || {};
-		this.options.filters[pattern] = fn;
+		filters[pattern] = fn;
 		
 		return this;
 	};
 	
 	
 	router.use = function() {
+		body.use.apply(body, arguments);
+		return this;
+	};
+	
+	router.param = function() {
 		body.use.apply(body, arguments);
 		return this;
 	};

@@ -3,6 +3,12 @@ var uuid = require('uuid');
 var fs = require('fs');
 var path = require('path');
 var minimatch = require('minimatch');
+
+var compression = require('compression');
+var bodyparser = require('body-parser');
+var xmlparser = require('express-xml-bodyparser');
+var typeis = require('type-is');
+
 var util = require('./util.js');
 
 function forward(config) {
@@ -11,14 +17,134 @@ function forward(config) {
 	return function forward(req, res, next) {
 		if( !config ) return next();
 		
+		var requestheader = util.mix({}, req.headers, {
+			'accept-encoding': null,
+			'x-forwarded-proto': req.headers.host,
+			'x-forwarded-host': req.headers.host,
+			'x-forwarded-server': req.headers.host,
+			'x-forwarded-path': req.originalUrl.substring(0, req.originalUrl.indexOf(req.url)),
+			'x-forwarded-for': (req.forwardedFor || []).concat([req.connection.remoteAddress]).filter(Boolean).join(', ')
+		});
+		
 		var request = http.request({
 			url: Url.parse(config.forward),
-			headers: req.headers,
+			headers: requestheader,
 			method: req.method
 		}, function(response) {
 			response.pipe(res, {end:true});
 		});
 		req.pipe(request, {end:true});
+	};
+}
+
+function forwarded(config) {
+	return function forwarded(req, res, next) {
+		//var forwardedFor = ('1.1.1.1,  2.2.2.2, ,    3.3.3.3')
+		var forwardedFor = (req.headers['x-forwarded-for'] || '').split(/ *, */).filter(Boolean);
+		forwardedFor.push(req.connection.remoteAddress);
+		
+		req.clientIp = forwardedFor[0];
+		req.forwardedFor = forwardedFor;
+		req.forwardedHost = req.headers['x-forwarded-host'];
+		
+		next();
+	};
+}
+
+function compress(config) {
+	if( typeof config === 'number' ) config = {threshold: config};
+	if( config && typeof config !== 'object' ) config = {};
+	
+	return function compress(req, res, next) {
+		if( config ) {
+			compression(config)(req, res, next);
+		} else {
+			next();
+		}
+	};
+}
+
+function lazyparse() {
+	var originalxmlregexp = xmlparser.regexp;// = /^text\/xml$/i;
+	
+	var bodyparsers = [bodyparser.json(), bodyparser.urlencoded({ extended: true })];
+	return function lazyparse(req, res, next) {
+		req.parse = function(options, callback) {
+			var finish = function(err) {
+				if( typeof callback === 'function' ) callback(err);
+			};
+			
+			var index = 0;
+			var dispatch = function() {
+				var fn = bodyparsers[index++];
+				if( fn ) {
+					fn(req, res, function(err) {
+						if( err ) return finish(err);
+						dispatch();
+					});
+				} else {
+					finish();
+				}
+			};
+			dispatch();
+		};
+		
+		req.parse.json = function(options, callback) {
+			options = options || {};
+			bodyparser.json(options)(req, res, function(err) {
+				if( typeof callback === 'function' ) callback(err);
+			});
+		};
+		
+		req.parse.text = function(options, callback) {
+			options = options || {};
+			bodyparser.text(options)(req, res, function(err) {
+				if( typeof callback === 'function' ) callback(err);
+			});
+		};
+		
+		req.parse.raw = function(options, callback) {
+			options = options || {};
+			bodyparser.raw(options)(req, res, function(err) {
+				if( typeof callback === 'function' ) callback(err);
+			});
+		};
+		
+		req.parse.urlencoded = function(options, callback) {
+			options = options || {};
+			bodyparser.urlencoded(options)(req, res, function(err) {
+				if( typeof callback === 'function' ) callback(err);
+			});
+		};
+		
+		req.parse.xml = function(options, callback) {
+			xmlparser.regexp = /\s*\/\s*/;
+			xmlparser(options)(req, res, function(err) {
+				xmlparser.regexp = originalxmlregexp;
+				
+				if( typeof callback === 'function' ) callback(err);
+			});
+		};
+		
+		req.typeis = function(type) {
+			return typeis(req, type);
+		};
+		
+		req.parse.csurf = function(options, callback) {
+			csurf(options)(req, res, function(err) {
+				if( typeof callback === 'function' ) callback(err);
+			});
+		};
+		
+		req.parse.multipart = function(options, callback) {
+			options = options || {};
+			options.type = '*/*';
+			multer(options)(req, res, function(err) {
+				if( typeof callback === 'function' ) callback(err);
+			});
+		};
+		
+		next();
 	};
 }
 
@@ -30,11 +156,16 @@ function forward(config) {
 function docbase(config) {
 	if( typeof config === 'string' ) config = {docbase:config};
 	config = config || {};
-	var label = config.label;
 	
 	return function docbase(req, res, next) {	
 		var origindocbase = req.docbase;
 		var docbase;
+				
+		if( req.path === '/' && config.indexpage ) {
+			if( config.indexpage[0] !== '/' ) config.indexpage = '/' + config.indexpage;
+			req.path = config.indexpage;
+			req.url = config.indexpage + (req.url.substring(1) || '');
+		}
 				
 		if( typeof config.docbase === 'object' ) {
 			docbase = config.docbase[req.hostname] || config.docbase['*'];
@@ -62,13 +193,23 @@ function docbase(config) {
 			var filter = config.filters[pattern];
 		
 			if( minimatch(req.path, pattern) ) {
+				var filtermap = config.filtermap || {};
+				if( typeof filter === 'string' ) {
+					var f = filtermap[filter];
+					if( !f ) {
+						util.warn(config.label, 'unknwon filter[' + filter + ']');
+						continue;
+					}
+					filter = f.filter;
+				}
+				
 				if( filter === false ) filterchain.push(false);
 				else if( typeof filter === 'function' ) filterchain.push(filter);
 				else if( Array.isArray(filter) ) filter.forEach(function(fn) { filterchain.push(fn); });
 			}
 		}
 		
-		if( config.debug ) util.debug(label, (docbase ? '"' + docbase + '"' : '(no docbase)'), req.url, filterchain);
+		if( config.debug ) util.debug(config.label, (docbase ? '"' + docbase + '"' : '(no docbase)'), req.path, filterchain);
 				
 		var body = config.router;
 		var staticFirst = config.staticFirst;
@@ -139,8 +280,6 @@ function cors(options) {
 		next();
 	};
 };
-
-
 
 function accesslog(options) {
 	options = options || {};
@@ -236,6 +375,9 @@ function errorsend(options) {
 
 module.exports = {
 	forward: forward,
+	forwarded: forwarded,
+	lazyparse: lazyparse,
+	compress: compress,
 	docbase: docbase,
 	cors: cors,
 	accesslog: accesslog,
