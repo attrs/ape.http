@@ -7,7 +7,7 @@ var routers = require('./routers.js');
 
 // class Bucket
 function Bucket(id) {
-	var docbase, filters = {}, debug = true, staticFirst, indexpage, Server = require('./Server.js');
+	var docbase, filters = {}, debug = true, staticfirst, indexpage, Server = require('./Server.js');
 	
 	var body = express.Router();
 	var router = function(req, res, next) {
@@ -20,9 +20,9 @@ function Bucket(id) {
 			label: router,
 			debug: debug,
 			docbase: docbase,
-			router: body,
 			indexpage: indexpage,
-			staticFirst: staticFirst,
+			staticfirst: staticfirst,
+			router: body,
 			filtermap: Server.filters,
 			filters: util.mix(Server.filtermapping, filters)
 		})(req, res, function(err) {
@@ -36,8 +36,8 @@ function Bucket(id) {
 	router.toString = function() {
 		return 'router:' + (id || 'noname');
 	};
-	router.staticFirst = function(b) {
-		staticFirst = b;
+	router.staticfirst = function(b) {
+		staticfirst = b;
 		return this;
 	};
 	router.docbase = function(doc) {

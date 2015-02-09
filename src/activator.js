@@ -6,6 +6,8 @@ var fs = require('fs');
 var wrench = require('wrench');
 var util = require('./util.js');
 
+require('./filters/nodejs.js');
+
 var buckets = {};
 
 module.exports = {

@@ -11,41 +11,76 @@ var typeis = require('type-is');
 
 var util = require('./util.js');
 
-function forward(config) {
-	var config = (typeof config === 'string' ? {forward:config} : config);
-	
+function forward(config) {	
 	return function forward(req, res, next) {
-		if( !config ) return next();
+		req.forward = function(options, req, res, next) {
+			options = options || {};
+			options = typeof options === 'string' ? Url.parse(options) : options;
+			options = util.mix({}, config, options);
+			
+			util.forward(options, req, res)
+			.on('error', function(err, request) {
+				if( debug ) util.debug(pkg.name, 'error', '://' + request.hostname + ':' + request.port + request.path);
+				next(err);
+			})
+			.on('notfound', function(err, request, response) {
+				next(new Error('forward page not found:' + options.url));
+			})
+			.on('errorstatus', function(err, request, response) {
+				next(err);
+			})
+			.on('response', function(request, response) {
+				if( debug ) {
+					var status = response.statusCode;
+					if( response.statusCode >= 400 ) status = chalk.red(status);
+					else status = chalk.green(status);
+					
+					util.debug('php', status, request.method, '://' + launcher.host + ':' + launcher.port + request.path);
+					if( debug === 'detail' ) {
+						util.debug(pkg.name, 'request', {
+							hostname: request.hostname,
+							path: request.path,
+							method: req.method,
+							port: request.port,
+							headers: request.headers
+						});
+						util.debug('php', 'response', response.headers);
+					}
+				}
+			});
+		};
 		
-		var requestheader = util.mix({}, req.headers, {
-			'accept-encoding': null,
-			'x-forwarded-proto': req.headers.host,
-			'x-forwarded-host': req.headers.host,
-			'x-forwarded-server': req.headers.host,
-			'x-forwarded-path': req.originalUrl.substring(0, req.originalUrl.indexOf(req.url)),
-			'x-forwarded-for': (req.forwardedFor || []).concat([req.connection.remoteAddress]).filter(Boolean).join(', ')
-		});
-		
-		var request = http.request({
-			url: Url.parse(config.forward),
-			headers: requestheader,
-			method: req.method
-		}, function(response) {
-			response.pipe(res, {end:true});
-		});
-		req.pipe(request, {end:true});
+		if( config ) req.forward(config, req, res, next);
+		else next();
 	};
 }
 
 function forwarded(config) {
+	config = config || {};
+	var portmap = util.mix({
+		'http': 80,
+		'https': 443,
+		'ftp': 21
+	}, config.portmap || {});
+	
 	return function forwarded(req, res, next) {
-		//var forwardedFor = ('1.1.1.1,  2.2.2.2, ,    3.3.3.3')
-		var forwardedFor = (req.headers['x-forwarded-for'] || '').split(/ *, */).filter(Boolean);
-		forwardedFor.push(req.connection.remoteAddress);
+		var headers = req.headers;
 		
-		req.clientIp = forwardedFor[0];
-		req.forwardedFor = forwardedFor;
-		req.forwardedHost = req.headers['x-forwarded-host'];
+		var hostname = headers.host.split(':').filter(Boolean);
+		var port = headers['x-forwarded-port'] || hostname[1] || portmap[req.protocol];
+		hostname = hostname[0];
+		
+		var forwardedFor = (headers['x-forwarded-for'] || '').split(/ *, */).filter(Boolean);
+		req.forwarded = {
+			'clientip': forwardedFor[0] || req.connection.remoteAddress,
+			'from': req.connection.remoteAddress,
+			'port': port,
+			'protocol': headers['x-forwarded-proto'] || headers['x-forwarded-protocol'],
+			'for': forwardedFor,
+			'host': headers['x-forwarded-host'] || forwardedFor[0],
+			'server': headers['x-forwarded-server'],
+			'path': headers['x-forwarded-path']
+		};
 		
 		next();
 	};
@@ -212,7 +247,7 @@ function docbase(config) {
 		if( config.debug ) util.debug(config.label, (docbase ? '"' + docbase + '"' : '(no docbase)'), req.path, filterchain);
 				
 		var body = config.router;
-		var staticFirst = config.staticFirst;
+		var staticfirst = config.staticfirst;
 		
 		req.docbase = docbase;
 		
@@ -226,7 +261,7 @@ function docbase(config) {
 		
 		if( filterchain.length <= 0 ) {
 			if( docbase && body ) {
-				if( config.staticFirst ) {
+				if( config.staticfirst ) {
 					express.static(docbase)(req, res, function(err) {
 						if( err ) return next(err);
 						body(req, res, next);

@@ -69,6 +69,11 @@ Server.prototype = {
 		app.use(docbase({
 			label: this,
 			filtermap: filters,
+			indexpage: options.indexpage,
+			staticFirst: options.staticfirst,
+			get router() {
+				return self.body;
+			},
 			get debug() {
 				return self.debug;
 			},
@@ -79,11 +84,11 @@ Server.prototype = {
 				return util.mix(filtermapping, self.filters);
 			}
 		}));
-		app.use(this.body);
 
 		for(var file in options.mount) {
 			app.use(options.mount[file], docbase({
 				filtermap: filters,
+				indexpage: options.mount.indexpage,
 				get label() {
 					return this.toString() + ':mounted';
 				}, 
@@ -352,12 +357,6 @@ var filter = function(name, options) {
 	
 	return this;
 };
-
-// bundle filter
-filter('nodejs', {
-	pattern: ['**/*.njs', '**/*.node.js', '/nodejs/*.js', '/nodejs/**/*.js', '**/*.jade', '**/*.ejs', '**/*.swig', '**/*.haml'],
-	filter: require('./filters/nodejs.js')
-});
 
 module.exports = {
 	all: all,
