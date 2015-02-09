@@ -8,7 +8,7 @@
     "test": "jasmine-node --test-dir test --watch src *.json --autotest --color"
   },
   "bin": {
-    "plexi.http": "node bin/server.js"
+    "plexi.http": "bin/server.js"
   },
   "dependencies": {
     "body-parser": "^1.10.0",
