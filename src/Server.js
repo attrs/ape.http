@@ -19,7 +19,7 @@ var minimatch = require("minimatch");
 
 var routers = require('./routers.js');
 var Listener = require('./Listener.js');
-var util = require('./util.js');
+var util = require('attrs.util');
 var accesslog = routers.accesslog;
 var errorlog = routers.errorlog;
 var docbase = routers.docbase;

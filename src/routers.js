@@ -9,7 +9,7 @@ var bodyparser = require('body-parser');
 var xmlparser = require('express-xml-bodyparser');
 var typeis = require('type-is');
 
-var util = require('./util.js');
+var util = require('attrs.util');
 
 function forward(config) {	
 	return function forward(req, res, next) {
@@ -79,7 +79,8 @@ function forwarded(config) {
 			'for': forwardedFor,
 			'host': headers['x-forwarded-host'] || forwardedFor[0],
 			'server': headers['x-forwarded-server'],
-			'path': headers['x-forwarded-path']
+			'path': headers['x-traversal-path'],
+			'scriptname': headers['x-forwarded-script-name'] || headers['x-forwarded-path']
 		};
 		
 		next();

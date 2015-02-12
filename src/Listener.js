@@ -3,7 +3,7 @@ var fs = require('fs');
 var path = require('path');
 var express = require('express');
 var vhost = require('vhost');
-var util = require('./util.js');
+var util = require('attrs.util');
 
 // class Bucket
 function Listener(options) {

@@ -2,7 +2,7 @@ var express = require('express');
 var fs = require('fs');
 var path = require('path');
 var minimatch = require('minimatch');
-var util = require('./util.js');
+var util = require('attrs.util');
 var routers = require('./routers.js');
 
 // class Bucket

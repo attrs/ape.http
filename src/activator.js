@@ -4,7 +4,7 @@ var Bucket = require('./Bucket.js');
 var path = require('path');
 var fs = require('fs');
 var wrench = require('wrench');
-var util = require('./util.js');
+var util = require('attrs.util');
 
 require('./filters/nodejs.js');
 
@@ -12,29 +12,11 @@ var buckets = {};
 
 module.exports = {
 	start: function(ctx) {
-		var config = ctx.preference;
-						
-		var listeners = config.listeners || [];
-		listeners.forEach(function(options) {
-			Listener.create(options);
-		});
+		var app = ctx.application;
+		var pref = ctx.preference;
 		
-		// create system server, http://localhost:19000
-		var systemserver = Server.create('system', {
-			port: 19000
-		}).mount('/libs', path.resolve(__dirname, '../bower_components')).listen();
-		
-		systemserver.mount('/buckets.json', function(req, res, next) {
-			res.send(buckets);			
-		});
-		
-		var servers = config.servers;
-		for( var k in servers ) {
-			Server.create(k, servers[k]).listen();
-		}
-		
-		// if server config is null, create default server & copy initial files
-		if( !servers ) {
+		// describe to default pref to plexi.json
+		if( !pref ) {
 			var docbase = path.resolve(process.cwd(), 'www');
 			if( !fs.existsSync(docbase) ) {
 				fs.mkdirSync(docbase);
@@ -43,10 +25,29 @@ module.exports = {
 					preserveFiles: true
 				});
 			}
-			var defaultserver = Server.create('default', {
-				docbase: docbase,
-				mapping: '*'
-			}).mount('/libs', path.resolve(__dirname, '../bower_components')).listen();
+			
+			pref = ctx.application.preferences.set('plexi.http', {
+				servers: {
+					'default': {
+						docbase: 'www',
+						mapping: '*',
+						mount: {
+							'bower_components': '/libs'
+						}
+					}
+				}
+			});
+			ctx.application.preferences.save();
+		}
+						
+		var listeners = pref.listeners || [];
+		listeners.forEach(function(options) {
+			Listener.create(options);
+		});
+		
+		var servers = pref.servers;
+		for( var k in servers ) {
+			Server.create(k, servers[k]).listen();
 		}
 		
 		this.exports = {
@@ -57,6 +58,8 @@ module.exports = {
 				name = name || 'default';
 				var id = this.id ? this.id + ':' + name : name;
 				
+				util.debug('plexi.http', 'bucket create', id);
+				
 				if( buckets[id] ) return util.error('plexi.http', 'already exists bucket name', name);
 				
 				var bucket = new Bucket(id);
@@ -64,21 +67,38 @@ module.exports = {
 					Server.mountToAll(uri, this);
 					return this;
 				};
-				bucket.mount = function(uri, tosystem) {
+				bucket.mount = function(uri) {
 					Server.mount(uri);
-					systemserver.mount(id, '/buckets/' + id, this);
 					return this;
 				};
 				buckets[id] = bucket;
 				return bucket;
 			},
-			mount: function(uri, bucket) {
-				var bucketname = bucket.id || this.id.toString();
-				Server.mount(bucketname, uri, bucket);
+			mount: function(mount, bucket) {
+				if( typeof mount === 'string' ) mount = {path: mount};
+				
+				if( !mount ) return util.error('plexi.http', 'illegal mount', this.id.toString(), mount);
+				
+				var bucketname = bucket.id || (this.id + ':' + (mount.name || 'default'));
+				util.debug('plexi.http', 'bucket mount', bucketname, mount, '[from ' + this.id.toString() + ']');
+				
+				if( mount.all ) {
+					Server.mountToAll(mount.path, bucket);
+				} else if( mount.server ) {
+					var server = Server.get(mount.server);
+					if( !server ) return util.error('plexi.http', 'not found mount for ', this, mount);
+					
+					server.mount(mount.path, bucket);
+				} else {
+					Server.mount(bucketname, mount.path, bucket);
+				}
 				return this;
 			},
 			mountToAll: function(uri, bucket) {
 				Server.mountToAll(uri, bucket);
+				return this;
+			},
+			unmount: function(bucket) {
 				return this;
 			},
 			drop: function(name) {
@@ -90,10 +110,9 @@ module.exports = {
 					var servers = Server.finds(bucketname);
 					if( servers ) {					
 						servers.forEach(function(server) {
-							server.unmount(bucket);			
+							server.unmount(bucket);
 						});
 					}
-					systemserver.unmount(bucket);
 				}
 				
 				buckets[bucketname] = null;
@@ -115,15 +134,11 @@ module.exports = {
 			},
 			filter: function(name, filter) {
 				return Server.filter.apply(Server, arguments);
+			},
+			status: function() {
+				return {};
 			}
 		};
-		
-		// create system workbench
-		process.nextTick(function() {
-			var Workbench = ctx.require('plexi.workbench');
-			var workbench = Workbench.create('system', path.resolve(__dirname, '../workbench'));			
-			systemserver.mount('/', workbench.router);
-		});
 	},
 	stop: function(ctx) {
 		Listener.all().forEach(function(listener) {
