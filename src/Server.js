@@ -284,9 +284,6 @@ var finds = function(mapping) {
 	var arr = [];
 	for(var name in servers) {
 		var server = servers[name];
-		
-		console.log('finds', mapping, server.options);
-		
 		if( server && server.matches(mapping) ) {
 			arr.push(server);
 		}
