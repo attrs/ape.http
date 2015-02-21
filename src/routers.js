@@ -3,13 +3,41 @@ var uuid = require('uuid');
 var fs = require('fs');
 var path = require('path');
 var minimatch = require('minimatch');
-
+var cons = require('consolidate');
 var compression = require('compression');
 var bodyparser = require('body-parser');
 var xmlparser = require('express-xml-bodyparser');
 var typeis = require('type-is');
-
 var util = require('attrs.util');
+
+function renderer() {
+	return function renderer(req, res, next) {
+		res.render = function(view, vo, callback) {
+			var ext = view.substring(view.lastIndexOf('.') + 1);
+					
+			if( typeof callback !== 'function' && typeof local === 'function' ) {
+				callback = local;
+				vo = null;
+			}
+			
+			if( typeof callback !== 'function' ) return next(new Error('illegal callback'));
+			
+			if( typeof ext !== 'string' || !cons[ext] ) {
+				if( callback ) return callback(new Error('unsupported template engine'));
+				else return next(new Error('unsupported template engine'));
+			}
+		
+			cons[ext](view, vo, function(err, html){
+				if( callback ) return callback(err, html);
+			
+				if( err ) return next(err);
+				res.send(html);
+			});
+		};
+		
+		next();
+	}
+}
 
 function forward(config) {	
 	return function forward(req, res, next) {
@@ -303,7 +331,7 @@ function docbase(config) {
 function cors(options) {
 	options = options || {};
 	return function cors(req, res, next){
-		if ('OPTIONS' == req.method) {
+		if ('OPTIONS' === req.method) {
 			var config = options[req.hostname];
 			if( config ) {
 				res.header('Access-Control-Allow-Origin', req.hostname);
@@ -410,6 +438,7 @@ function errorsend(options) {
 
 
 module.exports = {
+	renderer: renderer,
 	forward: forward,
 	forwarded: forwarded,
 	lazyparse: lazyparse,

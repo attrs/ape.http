@@ -50,23 +50,30 @@ Listener.prototype = {
 		
 		var servers = this.servers;
 		var router = function(req, res) {
-			var index = 0;
-			var dispatch = function() {
-				var server = servers[index++];
-				if( server && server.router ) {
-					server.router(req, res, function(err) {
-						if( err ) {
-							res.send(err);
-							return util.error(server, err);
-						}
-						dispatch();
-					});
-				} else {
-					res.statusCode = 404;
-					res.end('Not Found');
-				}
-			};
-			dispatch();
+			try {
+				var index = 0;
+				var dispatch = function() {
+					var server = servers[index++];
+					if( server && server.router ) {
+						server.router(req, res, function(err) {
+							if( err ) {
+								util.error(server, err);
+								res.status(500).send('<pre>' + (err.stack || err) + '</pre>');
+								return;
+							}
+							dispatch();
+						});
+					} else {
+						res.statusCode = 404;
+						res.end('Not Found');
+					}
+				};
+				dispatch();
+			} catch(err) {
+				util.error(server, err)
+				res.send(err);
+				return;
+			}
 		};
 		
 		var httpd;

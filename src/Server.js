@@ -28,6 +28,7 @@ var cors = routers.cors;
 var forwarded = routers.forwarded;
 var compress = routers.compress;
 var lazyparse = routers.lazyparse;
+var renderer = routers.renderer;
 
 
 // class Server
@@ -54,10 +55,11 @@ Server.prototype = {
 		app.set('json spaces', '\t');
 		app.set('server', this);
 		for(var k in options.variables ) app.set(k, options.variables[k]);
-
+		
 		app.use(accesslog(options.logging));
 		app.use(compress(options.compress));
 		app.use(forwarded());
+		app.use(renderer());
 		app.use(forward(options.forward));
 		app.use(favicon(options.favicon || path.resolve(__dirname, '../favicon/favicon.ico')));
 		app.use(cors(options.cors));		
@@ -282,6 +284,9 @@ var finds = function(mapping) {
 	var arr = [];
 	for(var name in servers) {
 		var server = servers[name];
+		
+		console.log('finds', mapping, server.options);
+		
 		if( server && server.matches(mapping) ) {
 			arr.push(server);
 		}
@@ -332,7 +337,6 @@ var filtermapping = {}, filters = {};
 var filter = function(name, options) {
 	if( !name || typeof name !== 'string' ) return util.error('Server', 'illegal filter name', name);
 	if( arguments.length === 1 ) return filters[name];
-	if( filters[name] ) return util.error('Server', 'illegal ');
 		
 	if( options === false ) {
 		delete filtermap[name];
