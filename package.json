@@ -1,7 +1,7 @@
 {
   "name": "plexi.http",
   "description": "plexi plugin for http service",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "main": "src/main.js",
   "scripts": {
     "test": "jasmine-node --test-dir test --watch src *.json --autotest --color"
