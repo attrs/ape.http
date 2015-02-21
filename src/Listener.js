@@ -58,14 +58,16 @@ Listener.prototype = {
 						server.router(req, res, function(err) {
 							if( err ) {
 								util.error(server, err);
-								res.status(500).send('<pre>' + (err.stack || err) + '</pre>');
+								if( !res.headersSent ) res.status(500).send('<pre>' + (err.stack || err) + '</pre>');
 								return;
 							}
 							dispatch();
 						});
 					} else {
-						res.statusCode = 404;
-						res.end('Not Found');
+						if( !res.headersSent ) {
+							res.statusCode = 404;
+							res.end('Not Found');
+						}
 					}
 				};
 				dispatch();
