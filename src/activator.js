@@ -32,7 +32,7 @@ module.exports = {
 						docbase: 'www',
 						mapping: '*',
 						mount: {
-							'bower_components': '/libs'
+							'./bower_components': '/libs'
 						}
 					}
 				}

@@ -31,7 +31,7 @@ Listener.prototype = {
 	has: function(server) {
 		return ~this.servers.indexOf(server) ? true : false;
 	},
-	listen: function(callback) {
+	listen: function(callback) {		
 		if( this.httpd ) return util.error(this, 'already listen', this.port);
 		
 		var self = this;
