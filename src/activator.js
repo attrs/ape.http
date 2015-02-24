@@ -12,7 +12,6 @@ var buckets = {};
 
 module.exports = {
 	start: function(ctx) {
-		var app = ctx.application;
 		var pref = ctx.preference;
 		
 		// describe to default pref to plexi.json
@@ -30,6 +29,7 @@ module.exports = {
 				servers: {
 					'default': {
 						docbase: 'www',
+						port: 9000,
 						mapping: '*',
 						mount: {
 							'./bower_components': '/libs'
