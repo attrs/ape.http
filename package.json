@@ -12,7 +12,7 @@
   "dependencies": {
     "attrs.util": "^0.1.0",
     "body-parser": "^1.10.0",
-    "chalk": "^0.5.1",
+    "chalk": "^1.0.0",
     "colors": "^1.0.3",
     "compression": "^1.2.1",
     "consolidate": "^0.11.0",
